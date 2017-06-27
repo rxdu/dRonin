@@ -41,6 +41,7 @@
 /* Enable/Disable PiOS Modules */
 #define PIOS_INCLUDE_I2C
 #define PIOS_INCLUDE_SPI
+#define PIOS_INCLUDE_CAN
 #define PIOS_INCLUDE_FASTHEAP
 #define PIOS_INCLUDE_TBSVTXCONFIG
 #define PIOS_INCLUDE_WS2811

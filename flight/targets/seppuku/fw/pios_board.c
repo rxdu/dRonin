@@ -58,6 +58,9 @@ uintptr_t pios_com_openlog_logging_id;
 uintptr_t pios_uavo_settings_fs_id;
 uintptr_t pios_internal_adc_id;
 
+uintptr_t pios_com_can_id;
+uintptr_t pios_can_id;
+
 uintptr_t external_i2c_adapter_id = 0;
 
 /**
@@ -150,7 +153,7 @@ void PIOS_Board_Init(void) {
 
 	/* Delay system */
 	PIOS_DELAY_Init();
-	
+
 	const struct pios_board_info * bdinfo = &pios_board_info_blob;
 
 #if defined(PIOS_INCLUDE_ANNUNC)
@@ -274,7 +277,7 @@ void PIOS_Board_Init(void) {
 	}
 
 	PIOS_HAL_ConfigureCDC(hw_usb_vcpport, pios_usb_id, &pios_usb_cdc_cfg);
-	
+
 #endif	/* PIOS_INCLUDE_USB_CDC */
 
 #if defined(PIOS_INCLUDE_USB_HID)
@@ -432,6 +435,21 @@ void PIOS_Board_Init(void) {
 	PIOS_HAL_ConfigureDAC(pios_dac);
 #endif /* PIOS_INCLUDE_DAC */
 
+#if defined(PIOS_INCLUDE_CAN)
+	if(get_use_can(bdinfo->board_rev)) {
+		if (PIOS_CAN_Init(&pios_can_id, &pios_can_cfg) != 0)
+			PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_CAN);
+
+		if (PIOS_COM_Init(&pios_com_can_id, &pios_can_com_driver, pios_can_id,
+		                  PIOS_COM_CAN_RX_BUF_LEN,
+		                  PIOS_COM_CAN_TX_BUF_LEN))
+			PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_CAN);
+
+		/* pios_com_bridge_id = pios_com_can_id; */
+	}
+#endif
+
+	PIOS_DELAY_WaitmS(50);
 
 /* init sensor queue registration */
 	PIOS_SENSORS_Init();
