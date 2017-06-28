@@ -5,16 +5,9 @@
 #include "pios_thread.h"
 #include "pios_can.h"
 
-#include "attitudeactual.h"
-#include "camerastabsettings.h"
-#include "cameradesired.h"
-#include "homelocation.h"
-#include "manualcontrolcommand.h"
 #include "modulesettings.h"
 #include "misc_math.h"
-#include "poilocation.h"
-#include "positionactual.h"
-#include "tabletinfo.h"
+#include "offboard_ctrl_types.h"
 
 //
 // Configuration
@@ -25,29 +18,15 @@
 // Private types
 enum {ROLL,PITCH,YAW,MAX_AXES};
 
+typedef struct
+{
+    bool initialized;
+} OffboardCtrlCommStatus;
+
 // Private variables
-static struct CameraStab_data {
-	uint32_t lastSysTime;
-	uint8_t AttitudeFilter;
-	float attitude_filtered[MAX_AXES];
-	float inputs[CAMERASTABSETTINGS_INPUT_NUMELEM];
-	float FFlastAttitude[MAX_AXES];
-	float FFlastFilteredAttitude[MAX_AXES];
-	float FFfilterAccumulator[MAX_AXES];
-	CameraStabSettingsData settings;
-} *csd;
+static OffboardCtrlCommStatus *comm_status;
 
 // Private functions
-static void attitudeUpdated(UAVObjEvent* ev, void *ctx, void *obj, int len);
-static void settings_updated_cb(UAVObjEvent * ev, void *ctx, void *obj, int len);
-static void applyFF(uint8_t index, float dT_ms, float *attitude, CameraStabSettingsData* cameraStab);
-static void gimbal_can_message();
-
-#if defined(CAMERASTAB_POI_MODE)
-static void tablet_info_flag_update(UAVObjEvent * ev, void *ctx, void *obj, int len);
-static void tablet_info_process();
-static bool tablet_info_updated = false;
-#endif /* CAMERASTAB_POI_MODE */
 
 // Private variables
 
@@ -62,17 +41,15 @@ int32_t OffboardCtrlCommInitialize(void)
 	module_enabled = true;
 
 	if (module_enabled) {
-
 		// allocate and initialize the static data storage only if module is enabled
-		csd = (struct CameraStab_data *) PIOS_malloc(sizeof(struct CameraStab_data));
-		if (csd == NULL) {
+		comm_status = (OffboardCtrlCommStatus *) PIOS_malloc(sizeof(OffboardCtrlCommStatus));
+		if (comm_status == NULL) {
 			module_enabled = false;
 			return -1;
 		}
 
 		// make sure that all inputs[] are zeroed
-		memset(csd, 0, sizeof(struct CameraStab_data));
-		csd->lastSysTime = PIOS_Thread_Systime() - SAMPLE_PERIOD_MS;
+		memset(comm_status, 0, sizeof(OffboardCtrlCommStatus));
 
 		return 0;
 	}
@@ -104,8 +81,8 @@ MODULE_INITCALL(OffboardCtrlCommInitialize, OffboardCtrlCommStart)
  * Periodic callback that processes changes in the attitude
  * and recalculates the desied gimbal angle.
  */
-static void attitudeUpdated(UAVObjEvent* ev, void *ctx, void *obj, int len)
-{
+// static void attitudeUpdated(UAVObjEvent* ev, void *ctx, void *obj, int len)
+// {
 	// (void) ev; (void) ctx; (void) obj; (void) len;
 	// if (ev->obj != AttitudeActualHandle())
 	// 	return;
@@ -244,7 +221,7 @@ static void attitudeUpdated(UAVObjEvent* ev, void *ctx, void *obj, int len)
 
 	// Send a message over CAN, if include
 	//gimbal_can_message();
-}
+// }
 
 #if defined(PIOS_INCLUDE_CAN)
 extern uintptr_t pios_can_id;
