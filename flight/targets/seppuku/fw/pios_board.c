@@ -54,6 +54,9 @@
 #include "rgbledsettings.h"
 #endif
 
+#define PIOS_COM_CAN_RX_BUF_LEN 256
+#define PIOS_COM_CAN_TX_BUF_LEN 256
+
 uintptr_t pios_com_openlog_logging_id;
 uintptr_t pios_uavo_settings_fs_id;
 uintptr_t pios_internal_adc_id;
@@ -436,17 +439,15 @@ void PIOS_Board_Init(void) {
 #endif /* PIOS_INCLUDE_DAC */
 
 #if defined(PIOS_INCLUDE_CAN)
-	if(get_use_can(bdinfo->board_rev)) {
-		if (PIOS_CAN_Init(&pios_can_id, &pios_can_cfg) != 0)
+	if (PIOS_CAN_Init(&pios_can_id, &pios_can_cfg) != 0)
 			PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_CAN);
 
-		if (PIOS_COM_Init(&pios_com_can_id, &pios_can_com_driver, pios_can_id,
-		                  PIOS_COM_CAN_RX_BUF_LEN,
-		                  PIOS_COM_CAN_TX_BUF_LEN))
+	if (PIOS_COM_Init(&pios_com_can_id, &pios_can_com_driver, pios_can_id,
+		               PIOS_COM_CAN_RX_BUF_LEN,
+		               PIOS_COM_CAN_TX_BUF_LEN))
 			PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_CAN);
 
-		/* pios_com_bridge_id = pios_com_can_id; */
-	}
+	/* pios_com_bridge_id = pios_com_can_id; */
 #endif
 
 	PIOS_DELAY_WaitmS(50);
