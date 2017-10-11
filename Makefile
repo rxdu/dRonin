@@ -875,7 +875,7 @@ flightlib_armhardfp: OUTDIR=$(FLIGHTLIB_HARD_OUT_DIR)
 
 uavobjects_%: uavobjects
 	$(V1) mkdir -p $(OUTDIR)/dep
-	$(V1) cd $(ROOT_DIR)/flight/uavobjectlib && \
+	$(V1) cd $(ROOT_DIR)/flight/targets/uavobjectlib && \
 		$(MAKE) -r --no-print-directory \
 		TCHAIN_PREFIX="$(ARM_SDK_PREFIX)" \
 		REMOVE_CMD="$(RM)" \
@@ -897,7 +897,7 @@ uavobjects_armhardfp_clean:
 
 flightlib_%: $(UAVOBJECT_MARKER)
 	$(V1) mkdir -p $(OUTDIR)/dep
-	$(V1) cd $(ROOT_DIR)/flight/flightlib && \
+	$(V1) cd $(ROOT_DIR)/flight/targets/flightlib && \
 		$(MAKE) -r --no-print-directory \
 		TCHAIN_PREFIX="$(ARM_SDK_PREFIX)" \
 		REMOVE_CMD="$(RM)" \
