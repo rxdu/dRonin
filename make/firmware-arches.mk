@@ -7,6 +7,14 @@ OPENOCD_CONFIG      := stm32f4x.cfg
 MCU                 := cortex-m4
 STM32_TYPE          := STM32F446xx
 ARCH_TYPES          := STM32F4xx STM32
+else ifneq "$(findstring STM32F42,$(CHIP))" ""
+OPENOCD_JTAG_CONFIG ?= stlink-v2.cfg
+OPENOCD_CONFIG      := stm32f4x.cfg
+MCU                 := cortex-m4
+# Note: Current code base doesn't provide an easy way to add a new 
+#	type without modifying code at multiple places.
+STM32_TYPE          := STM32F427_437xx 
+ARCH_TYPES          := STM32F4xx STM32
 else ifneq "$(findstring STM32F40,$(CHIP))" ""
 OPENOCD_JTAG_CONFIG ?= stlink-v2.cfg
 OPENOCD_CONFIG      := stm32f4x.cfg

@@ -177,7 +177,7 @@ int32_t PIOS_SPI_SetClockSpeed(pios_spi_t spi_dev, uint32_t spi_speed)
 	//SPI clock is different depending on the bus
 	uint32_t spiBusClock = PIOS_SYSCLK;
 
-#if defined(STM32F40_41xxx) || defined(STM32F446xx)
+#if defined(STM32F40_41xxx) || defined(STM32F427_437xx) || defined(STM32F446xx)
 	if(spi_dev->cfg->regs == SPI1)
 		spiBusClock = PIOS_SYSCLK / 2;
 	else

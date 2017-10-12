@@ -37,7 +37,7 @@
  */
 
 #include "pios.h"
-#if defined(STM32F40_41xxx) || defined(STM32F446xx)  /* F4 */
+#if defined(STM32F40_41xxx) || defined(STM32F427_437xx) || defined(STM32F446xx)  /* F4 */
 #include "stm32f4xx_iwdg.h"
 #include "stm32f4xx_dbgmcu.h"
 #include "stm32f4xx_rtc.h"

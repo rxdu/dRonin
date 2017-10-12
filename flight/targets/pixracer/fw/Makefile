@@ -1,13 +1,13 @@
 ###############################################################################
 # @file       Makefile
-# @author     The OpenPilot Team, http://www.openpilot.org, Copyright (C) 2012.
+# @author     The OpenPilot Team, http://www.openpilot.org, Copyright (C) 2009.
 # @author     Tau Labs, http://taulabs.org, Copyright (C) 2012-2014
 # @author     dRonin, http://dronin.org Copyright (C) 2015-2016
 # @addtogroup 
 # @{
-# @addtogroup 
+# @addtogroup
 # @{
-# @brief Makefile to build firmware for the Revolution board.
+# @brief Makefile to build firmware for the Pixracer board.
 ###############################################################################
 #
 # This program is free software; you can redistribute it and/or modify
@@ -34,38 +34,42 @@ include $(MAKE_INC_DIR)/firmware-defs.mk
 DEBUG ?= NO
 
 # List of modules to include
-MODULES = Sensors
-MODULES += Attitude 
+MODULES = TestTask
+#MODULES += CarSensors
+#MODULES += CarActuator
+#MODULES += CarControl
+MODULES += RTT
+#MODULES += Sensors
+#MODULES += Attitude 
+#MODULES += Actuator
 MODULES += ManualControl
-MODULES += Stabilization
-MODULES += Actuator
-MODULES += FirmwareIAP
-MODULES += Telemetry
+#MODULES += Stabilization
+#MODULES += FirmwareIAP
+#MODULES += Telemetry
 
-OPTMODULES += GPS
-OPTMODULES += AltitudeHold 
-OPTMODULES += PathPlanner
-OPTMODULES += VtolPathFollower 
-OPTMODULES += FixedWingPathFollower
-OPTMODULES += CameraStab
-OPTMODULES += Autotune
-OPTMODULES += TxPID
-OPTMODULES += Battery
-OPTMODULES += VibrationAnalysis
-OPTMODULES += UAVOMavlinkBridge
-OPTMODULES += UAVOLighttelemetryBridge
-OPTMODULES += Airspeed
-OPTMODULES += UAVOHoTTBridge
-OPTMODULES += UAVOFrSKYSensorHubBridge
-OPTMODULES += UAVOFrSKYSPortBridge
-OPTMODULES += Geofence
-OPTMODULES += ComUsbBridge
-OPTMODULES += UAVOMSPBridge
-OPTMODULES += Logging
-OPTMODULES += FlightStats
-OPTMODULES += Storm32Bgc
-OPTMODULES += CharacterOSD
-OPTMODULES += UAVOCrossfireTelemetry
+# OPTMODULES += GPS
+# OPTMODULES += AltitudeHold 
+# OPTMODULES += VtolPathFollower 
+# OPTMODULES += FixedWingPathFollower
+# OPTMODULES += PathPlanner
+# OPTMODULES += CameraStab
+# OPTMODULES += Autotune
+# OPTMODULES += TxPID
+# OPTMODULES += VibrationAnalysis
+# OPTMODULES += UAVOMavlinkBridge
+# OPTMODULES += UAVOMSPBridge
+# OPTMODULES += Battery
+# OPTMODULES += ComUsbBridge
+# OPTMODULES += Airspeed
+# OPTMODULES += UAVOHoTTBridge
+# OPTMODULES += UAVOFrSKYSensorHubBridge
+# OPTMODULES += UAVOLighttelemetryBridge
+# OPTMODULES += UAVOFrSKYSPortBridge
+# OPTMODULES += Geofence
+# OPTMODULES += Logging
+# OPTMODULES += FlightStats
+# OPTMODULES += Storm32Bgc
+# OPTMODULES += UAVOCrossfireTelemetry
 
 # Paths
 OPUAVOBJINC = $(OPUAVOBJ)/inc
@@ -73,11 +77,11 @@ PIOSINC = $(PIOS)/inc
 FLIGHTLIBINC = $(FLIGHTLIB)/inc
 MATHLIB = $(FLIGHTLIB)/math
 MATHLIBINC = $(FLIGHTLIB)/math
-RSCODE = $(FLIGHTLIB)/rscode
-RSCODEINC = $(FLIGHTLIB)/rscode
+PIOSSTM32COMMON = $(PIOS)/STM32
+PIOSSTM32COMMONINC = $(PIOSSTM32COMMON)/inc
 PIOSSTM32F4XX = $(PIOS)/STM32F4xx
 PIOSCOMMON = $(PIOS)/Common
-PIOSCOMMONLIB = $(PIOSCOMMON)/Libraries
+PIOSCOMMONLIB = $(PIOS)/Common/Libraries
 APPLIBDIR = $(PIOSSTM32F4XX)/Libraries
 STMLIBDIR = $(APPLIBDIR)
 STMSPDDIR = $(STMLIBDIR)/STM32F4xx_StdPeriph_Driver
@@ -88,7 +92,6 @@ DEBUG_CM3_DIR_INC = $(DEBUG_CM3_DIR)/inc
 OPUAVOBJINC = $(OPUAVOBJ)/inc
 MAVLINKINC = $(FLIGHTLIB)/mavlink/v1.0/common
 
-SRC = 
 # optional component libraries
 include $(APPLIBDIR)/ChibiOS/library.mk
 
@@ -97,7 +100,7 @@ include $(APPLIBDIR)/ChibiOS/library.mk
 
 ## OPENPILOT CORE:
 SRC += ${OPMODULEDIR}/System/systemmod.c
-SRC += ${OPMODULEDIR}/System/rgbleds.c
+#SRC += ${OPMODULEDIR}/SystemMin/rgbleds.c
 SRC += chibi_main.c
 SRC += pios_board.c
 SRC += pios_usb_board_data.c
@@ -115,30 +118,29 @@ include $(PIOS)/STM32F4xx/library_chibios.mk
 
 ## PIOS Hardware (Common)
 SRC += pios_delay.c
+SRC += pios_can_common.c
 SRC += pios_exti.c
 SRC += pios_mpu.c
+SRC += pios_gcsrcvr.c
+SRC += pios_hmc5883.c
+SRC += pios_hmc5983.c
+SRC += pios_hmc5983_i2c.c
+SRC += pios_ms5611.c
 SRC += pios_etasv3.c
 SRC += pios_mpxv5004.c
 SRC += pios_mpxv7002.c
-SRC += pios_gcsrcvr.c
-SRC += pios_hmc5883.c
-SRC += pios_hmc5983_i2c.c
-SRC += pios_ms5611.c
+SRC += pios_px4flow.c
 SRC += pios_crc.c
 SRC += pios_com.c
 SRC += pios_dsm.c
-SRC += pios_openlrs.c
-SRC += pios_openlrs_rcvr.c
-SRC += pios_rfm22b.c
-SRC += pios_rfm22b_com.c
-SRC += pios_rfm22b_rcvr.c
 SRC += pios_rcvr.c
-SRC += pios_hsum.c
 SRC += pios_sbus.c
+SRC += pios_hsum.c
 SRC += pios_sensors.c
 SRC += pios_flash.c
 SRC += pios_flash_jedec.c
 SRC += pios_flashfs_logfs.c
+SRC += printf-stdarg.c
 SRC += pios_usb_desc_hid_cdc.c
 SRC += pios_usb_desc_hid_only.c
 SRC += pios_usb_util.c
@@ -162,34 +164,11 @@ SRC += pios_debug.c
 SRC += pios_wdg.c
 SRC += pios_reset.c
 SRC += pios_annunc.c
-SRC += pios_max7456.c
 SRC += pios_crossfire.c
-
-# List C source files here which must be compiled in ARM-Mode (no -mthumb).
-# use file-extension c for "c-only"-files
-## just for testing, timer.c could be compiled in thumb-mode too
-SRCARM =
 
 # List C++ source files here.
 # use file-extension .cpp for C++-files (not .C)
 CPPSRC =
-
-# List C++ source files here which must be compiled in ARM-Mode.
-# use file-extension .cpp for C++-files (not .C)
-#CPPSRCARM = $(TARGET).cpp
-CPPSRCARM =
-
-# List Assembler source files here.
-# Make them always end in a capital .S. Files ending in a lowercase .s
-# will not be considered source files but generated files (assembler
-# output from the compiler), and will be deleted upon "make clean"!
-# Even though the DOS/Win* filesystem matches both .s and .S the same,
-# it will preserve the spelling of the filenames, and gcc itself does
-# care about how the name is spelled on its command-line.
-
-
-# List Assembler source files here which must be assembled in ARM-Mode..
-ASRCARM =
 
 # List any extra directories to look for include files here.
 #    Each directory must be seperated by a space.
@@ -211,6 +190,8 @@ EXTRAINCDIRS  += $(OPUAVSYNTHDIR)
 EXTRAINCDIRS  += $(BOOTINC)
 EXTRAINCDIRS  += $(DEBUG_CM3_DIR_INC)
 EXTRAINCDIRS  += $(MAVLINKINC)
+EXTRAINCDIRS += $(PIOS)/../Modules/RTT
+EXTRAINCDIRS += $(PIOS)/../Modules/TestTask
 
 EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${OPTMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
 
@@ -243,9 +224,10 @@ else
 CFLAGS += -Os -fconserve-stack
 endif
 
+
+
 # common architecture-specific flags from the device-specific library makefile
 CFLAGS += $(ARCHFLAGS)
-
 CFLAGS += -DDIAGNOSTICS
 CFLAGS += -DDIAG_TASKS
 
@@ -255,18 +237,7 @@ CDEFS += -DARM_MATH_MATRIX_CHECK
 CDEFS += -DARM_MATH_ROUNDING
 CDEFS += -D__FPU_PRESENT=1
 CDEFS += -DUNALIGNED_SUPPORT_DISABLE
-
-# This is not the best place for these.  Really should abstract out
-# to the board file or something
 CFLAGS += -D$(STM32_TYPE)
-CFLAGS += -DMEM_SIZE=1024000000
-
-# Output format. (can be ihex or binary or both)
-#  binary to create a load-image in raw-binary format i.e. for SAM-BA,
-#  ihex to create a load-image in Intel hex format
-#LOADFORMAT = ihex
-#LOADFORMAT = binary
-LOADFORMAT = both
 
 # Debugging format.
 DEBUGF = dwarf-2
@@ -280,10 +251,14 @@ CDEFS += -DUSE_$(BOARD)
 ifeq ($(ENABLE_DEBUG_CONSOLE), YES)
 CDEFS += -DPIOS_INCLUDE_DEBUG_CONSOLE
 endif
-CDEFS += -DSTM32F40_41xxx
 CDEFS += '-DCORTEX_VTOR_INIT=($(FW_BANK_BASE)-$(EF_BANK_BASE))'
 
-# Declare all non-optional modules as built-in to force inclusion
+ifeq ($(ENABLE_DEBUG_CONSOLE), YES)
+CDEFS += -DPIOS_INCLUDE_DEBUG_CONSOLE
+endif
+
+
+# Declare all non-optional modules as built-in to force inclusion, strip off any appended varieties of module
 get_mod_name = $(shell echo $(1) | sed "s/\/[^\/]*$///")
 BUILTIN_DEFS := ${foreach MOD, ${MODULES}, -DMODULE_$(call get_mod_name, $(MOD))_BUILTIN }
 CDEFS += ${BUILTIN_DEFS}
@@ -314,13 +289,10 @@ CSTANDARD = -std=gnu99
 # Flags for C and C++ (arm-elf-gcc/arm-elf-g++)
 
 CFLAGS += -g$(DEBUGF)
-
 CFLAGS += -ffast-math
-
 CFLAGS += -mcpu=$(MCU)
 CFLAGS += $(CDEFS)
 CFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS)) -I.
-
 CFLAGS += -mapcs-frame
 CFLAGS += -fomit-frame-pointer
 CFLAGS += -ffunction-sections -fdata-sections
@@ -344,8 +316,6 @@ ASFLAGS += $(ADEFS)
 ASFLAGS += -Wa,-adhlns=$(addprefix $(OUTDIR)/, $(notdir $(addsuffix .lst, $(basename $<))))
 ASFLAGS += $(patsubst %,-I%,$(EXTRAINCDIRS))
 
-MATH_LIB = -lm
-
 LIBS += $(UAVOBJLIB)
 LIBS += $(FLIGHTLIBFILE)
 
@@ -356,11 +326,9 @@ LIBS += $(FLIGHTLIBFILE)
 LDFLAGS = -nostartfiles -Wl,-Map=$(OUTDIR)/$(TARGET).map,--cref,--gc-sections
 LDFLAGS += $(patsubst %,-L%,$(EXTRA_LIBDIRS))
 LDFLAGS += $(patsubst %,-l%,$(EXTRA_LIBS))
-LDFLAGS += $(MATH_LIB)
-LDFLAGS += -lc_nano -lgcc
+LDFLAGS += -lc_nano -lgcc -lm
 LDFLAGS += -Wl,--warn-common
 LDFLAGS += -Wl,--fatal-warnings
-LDFLAGS += -u _printf_float
 
 #Linker scripts
 LDFLAGS += -T memory.ld $(addprefix -T,$(LINKER_SCRIPTS_APP))

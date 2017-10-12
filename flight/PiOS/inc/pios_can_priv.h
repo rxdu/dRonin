@@ -24,11 +24,16 @@
  * for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with this program; if not, see <http://www.gnu.org/licenses/>
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
 #if !defined(PIOS_CAN_PRIV_H)
 #define PIOS_CAN_PRIV_H
+
+#include "pios.h"
+#include "pios_stm32.h"
+#include "pios_can.h"
 
 extern const struct pios_com_driver pios_can_com_driver;
 
@@ -49,6 +54,9 @@ struct pios_can_cfg {
  * @return 0 if successful, negative otherwise
  */
 int32_t PIOS_CAN_Init(uintptr_t *id, const struct pios_can_cfg *cfg);
+int32_t get_message_size(uint32_t msg_id);
+
+extern const uint32_t pios_can_message_stdid[PIOS_CAN_LAST];
 
 #endif /* PIOS_CAN_PRIV_H */
 

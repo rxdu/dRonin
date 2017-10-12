@@ -776,7 +776,7 @@ static int DSHOT_Update()
 		// Always delay at the beginning for consistent timing
 		PIOS_INLINEDELAY_TillCycleCnt(start_cycle);
 
-#if defined(STM32F40_41xxx) || defined(STM32F446xx)
+#if defined(STM32F40_41xxx) || defined(STM32F427_437xx) || defined(STM32F446xx)
 #define CLEAR_BITS(gpio, bits) do { (gpio)->BSRRH = bits; } while (0)
 #define SET_BITS(gpio, bits) do { (gpio)->BSRRL = bits; } while (0)
 #else
@@ -909,7 +909,7 @@ static uint32_t timer_apb_clock(TIM_TypeDef *timer)
 		return PIOS_PERIPHERAL_APB2_CLOCK;
 }
 
-#elif defined(STM32F40_41xxx) || defined(STM32F446xx) /*  F4 */
+#elif defined(STM32F40_41xxx) || defined(STM32F427_437xx) || defined(STM32F446xx) /*  F4 */
 
 static uint32_t timer_apb_clock(TIM_TypeDef *timer)
 {
