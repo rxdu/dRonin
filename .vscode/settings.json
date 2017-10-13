@@ -8,6 +8,13 @@
         "stm32f4xx_iwdg.h": "c",
         "systemalarms.h": "c",
         "systemsettings.h": "c",
-        "transmitter_control.h": "c"
+        "transmitter_control.h": "c",
+        "stabilizationsettings.h": "c",
+        "navigationsettings.h": "c",
+        "*.tcc": "c",
+        "type_traits": "c",
+        "system_error": "c",
+        "rope": "c",
+        "caractuatordesired.h": "c"
     }
 }

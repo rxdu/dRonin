@@ -214,10 +214,10 @@ static void PIOS_CAN_RegisterTxCallback(uintptr_t can_id, pios_com_callback tx_o
 	can_dev->tx_out_cb = tx_out_cb;
 }
 
-//! The mapping of message types to CAN BUS StdID
-static uint32_t pios_can_message_stdid[PIOS_CAN_LAST] = {
-	[PIOS_CAN_GIMBAL] = 0x130,
-};
+// //! The mapping of message types to CAN BUS StdID
+// static uint32_t pios_can_message_stdid[PIOS_CAN_LAST] = {
+// 	[PIOS_CAN_GIMBAL] = 0x130,
+// };
 
 //! The mapping of message types to CAN BUS StdID
 static struct pios_queue *pios_can_queues[PIOS_CAN_LAST];

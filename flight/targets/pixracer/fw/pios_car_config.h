@@ -2,7 +2,7 @@
 #define _PIOS_FLIGHT_CONFIG_H
 
 // Top level PIOS Subsystems
-#define PIOS_INCLUDE_ADC
+// #define PIOS_INCLUDE_ADC
 #define PIOS_INCLUDE_ANNUNC
 #define PIOS_INCLUDE_BL_HELPER
 #define PIOS_INCLUDE_COM

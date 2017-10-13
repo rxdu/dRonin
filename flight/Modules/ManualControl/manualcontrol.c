@@ -41,7 +41,6 @@
 #include "pios_rcvr.h"
 
 #include "control.h"
-#include "failsafe_control.h"
 #include "transmitter_control.h"
 
 #include "drivingstatus.h"
@@ -91,9 +90,7 @@ int32_t ManualControlStart()
  */
 int32_t ManualControlInitialize()
 {
-	if (failsafe_control_initialize() == -1 \
-		|| DrivingStatusInitialize() == -1 \
-		|| transmitter_control_initialize() == -1) {
+	if (transmitter_control_initialize() == -1) {
 	
 		return -1;
 	}
@@ -111,11 +108,11 @@ static void manualControlTask(void *parameters)
 	/* Make sure disarmed on power up */
 	DrivingStatusData drivingStatus;
 	DrivingStatusGet(&drivingStatus);
-	drivingStatus.Armed = FLIGHTSTATUS_ARMED_DISARMED;
+	drivingStatus.Armed = DRIVINGSTATUS_ARMED_DISARMED;
 	DrivingStatusSet(&drivingStatus);
 
-	// Select failsafe before run
-	failsafe_control_select(true);
+	// TODO: Stop car before run
+	
 
 	uint32_t arm_time = 1000;
 
@@ -133,7 +130,6 @@ static void manualControlTask(void *parameters)
 
 		// Process periodic data for each of the controllers, including reading
 		// all available inputs
-		failsafe_control_update();
 		transmitter_control_update();
 
 		// Initialize to invalid value to ensure first update sets DrivingStatus
@@ -152,7 +148,7 @@ static void manualControlTask(void *parameters)
 		// in the case of the tablet we need to be able to abort and fall back
 		// to failsafe for now
 		switch(control_selection) {
-		case FLIGHTSTATUS_CONTROLSOURCE_TRANSMITTER:
+		case DRIVINGSTATUS_CONTROLSOURCE_TRANSMITTER:
 			ret = transmitter_control_select(reset_controller);
 			break;		
 		default:
@@ -160,11 +156,7 @@ static void manualControlTask(void *parameters)
 			break;
 		}
 
-		if (ret) {
-			failsafe_control_select(last_control_selection !=
-					FLIGHTSTATUS_CONTROLSOURCE_FAILSAFE);
-			control_selection = FLIGHTSTATUS_CONTROLSOURCE_FAILSAFE;
-		}
+		(void)ret;
 
 		if (control_selection != last_control_selection) {
 			DrivingStatusControlSourceSet(&control_selection);
@@ -292,11 +284,11 @@ static void manualControlTask(void *parameters)
 			default:
 			case ARM_STATE_SAFETY:
 			case ARM_STATE_DISARMED:
-				armed = FLIGHTSTATUS_ARMED_DISARMED;
+				armed = DRIVINGSTATUS_ARMED_DISARMED;
 				vehicle_is_armed = false;
 				break;
 			case ARM_STATE_ARMING:
-				armed = FLIGHTSTATUS_ARMED_ARMING;
+				armed = DRIVINGSTATUS_ARMED_ARMING;
 				break;
 			case ARM_STATE_HOLDING:
 				/* For now consider "HOLDING" an armed state,
@@ -308,7 +300,7 @@ static void manualControlTask(void *parameters)
 				 * control position invalid.
 				 */
 			case ARM_STATE_ARMED:
-				armed = FLIGHTSTATUS_ARMED_ARMED;
+				armed = DRIVINGSTATUS_ARMED_ARMED;
 				vehicle_is_armed = true;
 				break;
 		}
@@ -339,10 +331,10 @@ static DrivingStatusControlSourceOptions control_source_select()
 	CarManualControlCommandData cmd;
 	CarManualControlCommandGet(&cmd);
 	if (cmd.Connected != CARMANUALCONTROLCOMMAND_CONNECTED_TRUE) {
-		return FLIGHTSTATUS_CONTROLSOURCE_FAILSAFE;
+		return DRIVINGSTATUS_CONTROLSOURCE_FAILSAFE;
 	} 
 	else {
-		return FLIGHTSTATUS_CONTROLSOURCE_TRANSMITTER;
+		return DRIVINGSTATUS_CONTROLSOURCE_TRANSMITTER;
 	}
 
 }
@@ -370,7 +362,7 @@ bool ok_to_arm(void)
 	uint8_t driving_mode;
 	DrivingStatusDrivingModeGet(&driving_mode);
 
-	if (driving_mode == FLIGHTSTATUS_FLIGHTMODE_FAILSAFE) {
+	if (driving_mode == DRIVINGSTATUS_DRIVINGMODE_FAILSAFE) {
 		/* Separately mask FAILSAFE arming here. */
 		return false;
 	}

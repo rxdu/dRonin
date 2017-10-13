@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<xml>
+	<object name="NavigationDesired" singleinstance="true" settings="false">
+		<description>The desired maneuver that @ref NavigationModule will try and achieve if DrivingMode is AUTO.  Comes from @ref ManaulControlModule.</description>
+		<field name="Roll" units="degrees" type="float" elements="1"/>
+		<field name="Pitch" units="degrees" type="float" elements="1"/>
+		<field name="Yaw" units="degrees" type="float" elements="1"/>
+		<field name="Thrust" units="%" type="float" elements="1"/>
+		<field name="NavigationMode" parent="SharedDefs.NavigationMode" type="enum" elementnames="Roll,Pitch,Yaw"/>
+		<field name="ReprojectionMode" parent="SharedDefs.ReprojectionMode" type="enum" elements="1"/>
+		<access gcs="readwrite" flight="readwrite"/>
+		<telemetrygcs acked="false" updatemode="manual" period="0"/>
+		<telemetryflight acked="false" updatemode="throttled" period="1000"/>
+		<logging updatemode="periodic" period="500"/>
+	</object>
+</xml>

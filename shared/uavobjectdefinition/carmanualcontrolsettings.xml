@@ -9,11 +9,9 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
-				<elementname>FlightMode</elementname>
+				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Accessory1</elementname>
-				<elementname>Accessory2</elementname>
 				<elementname>Arming</elementname>
 			</elementnames>
 			<!-- ReceiverActivity inherits these.
@@ -67,11 +65,9 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
-				<elementname>FlightMode</elementname>
+				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Accessory1</elementname>
-				<elementname>Accessory2</elementname>
 				<elementname>Arming</elementname>
 			</elementnames>
 		</field>
@@ -82,11 +78,9 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
-				<elementname>FlightMode</elementname>
+				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Accessory1</elementname>
-				<elementname>Accessory2</elementname>
 				<elementname>Arming</elementname>
 			</elementnames>
 		</field>
@@ -97,11 +91,9 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
-				<elementname>FlightMode</elementname>
+				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Accessory1</elementname>
-				<elementname>Accessory2</elementname>
 				<elementname>Arming</elementname>
 			</elementnames>
 		</field>
@@ -112,11 +104,9 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
-				<elementname>FlightMode</elementname>
+				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Accessory1</elementname>
-				<elementname>Accessory2</elementname>
 				<elementname>Arming</elementname>
 			</elementnames>
 		</field>
@@ -143,30 +133,18 @@
 		<field name="DisarmTime" units="ms" type="enum" elements="1" options="100,250,500,1000,2000" defaultvalue="500">
 			<description>Disarm time</description>
 		</field>
-		<!-- Note these options should be identical to those in StabilizationDesired.StabilizationMode -->
-		<field name="Stabilization1Settings" parent="SharedDefs.StabilizationMode" type="enum" elementnames="Roll,Pitch,Yaw" defaultvalue="Attitude,Attitude,Rate">
-			<description>Stabilization 1 settings</description>
+		<!-- Note these options should be identical to those in NavigationDesired.NavigationMode -->
+		<field name="Navigation1Settings" parent="SharedDefs.NavigationMode" type="enum" elementnames="Roll,Pitch,Yaw" defaultvalue="Manual,Manual,LineFollowing">
+			<description>Navigation 1 settings</description>
 		</field>
-		<field name="Stabilization2Settings" parent="SharedDefs.StabilizationMode" type="enum" elementnames="Roll,Pitch,Yaw" defaultvalue="Attitude,Attitude,Rate">
-			<description>Stabilization 2 settings</description>
+		<field name="Navigation1Reprojection" parent="SharedDefs.ReprojectionMode" type="enum" elements="1" defaultvalue="None">
+			<description>Navigation 1 reprojection</description>
 		</field>
-		<field name="Stabilization3Settings" parent="SharedDefs.StabilizationMode" type="enum" elementnames="Roll,Pitch,Yaw" defaultvalue="Attitude,Attitude,Rate">
-			<description>Stabilization 3 settings</description>
+		<field name="DrivingModeNumber" units="" type="uint8" elements="1" defaultvalue="3">
+			<description>Number of driving modes</description>
 		</field>
-		<field name="Stabilization1Reprojection" parent="SharedDefs.ReprojectionMode" type="enum" elements="1" defaultvalue="None">
-			<description>Stabilization 1 reprojection</description>
-		</field>
-		<field name="Stabilization2Reprojection" parent="SharedDefs.ReprojectionMode" type="enum" elements="1" defaultvalue="None">
-			<description>Stabilization 2 reprojection</description>
-		</field>
-		<field name="Stabilization3Reprojection" parent="SharedDefs.ReprojectionMode" type="enum" elements="1" defaultvalue="None">
-			<description>Stabilization 3 reprojection</description>
-		</field>
-		<field name="FlightModeNumber" units="" type="uint8" elements="1" defaultvalue="3">
-			<description>Number of flight modes</description>
-		</field>
-		<field name="FlightModePosition" units="" type="enum" elements="6" parent="SharedDefs.FlightMode" defaultvalue="Leveling,Leveling,Leveling,Horizon,ReturnToHome,PositionHold">
-			<description>Flight mode per position</description>
+		<field name="DrivingModePosition" units="" type="enum" elements="3" parent="SharedDefs.DrivingMode" defaultvalue="Manual,Navigation1,Manual">
+			<description>Driving mode per position</description>
 		</field>
 		<field name="ArmedTimeout" units="ms" type="uint16" elements="1" defaultvalue="30000">
 			<description>Time in armed + idle throttle before disarm</description>

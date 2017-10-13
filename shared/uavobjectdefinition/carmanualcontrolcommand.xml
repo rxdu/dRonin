@@ -22,8 +22,6 @@
 				<elementname>FlightMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Accessory1</elementname>
-				<elementname>Accessory2</elementname>
 				<elementname>Arming</elementname>
 			</elementnames>
 		</field>

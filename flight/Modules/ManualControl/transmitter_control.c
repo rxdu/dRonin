@@ -48,6 +48,8 @@
 #include "positionactual.h"
 #include "receiveractivity.h"
 #include "systemsettings.h"
+#include "shareddefs.h"
+#include "caractuatordesired.h"
 
 #include "misc_math.h"
 
@@ -91,7 +93,6 @@ extern uintptr_t pios_rcvr_group_map[];
 static CarManualControlCommandData   cmd;
 static CarManualControlSettingsData  settings;
 
-static SystemSettingsAirframeTypeOptions airframe_type;
 static uint8_t                    disconnected_count = 0;
 static uint8_t                    connected_count = 0;
 static struct rcvr_activity_fsm   activity_fsm;
@@ -102,9 +103,9 @@ static enum control_status        control_status;
 static bool                       settings_updated;
 
 // Private functions
-static float get_thrust_source(CarManualControlCommandData *manual_control_command, SystemSettingsAirframeTypeOptions * airframe_type, bool normalize_positive);
-static void update_stabilization_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings, SystemSettingsAirframeTypeOptions * airframe_type);
-static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
+static void update_actuator_desired(CarManualControlCommandData * cmd);
+static void update_navigation_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings);
+// static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
 static void set_driving_mode();
 static void process_transmitter_events(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings, bool valid);
 static void set_manual_control_error(SystemAlarmsManualControlOptions errorCode);
@@ -114,7 +115,6 @@ static uint32_t timeDifferenceMs(uint32_t start_time, uint32_t end_time);
 static void applyDeadband(float *value, float deadband);
 static void resetRcvrActivity(struct rcvr_activity_fsm * fsm);
 static bool updateRcvrActivity(struct rcvr_activity_fsm * fsm);
-static void set_loiter_command(CarManualControlCommandData *cmd, SystemSettingsAirframeTypeOptions *airframe_type);
 
 // Exposed from manualcontrol to prevent attempts to arm when unsafe
 extern bool ok_to_arm();
@@ -141,8 +141,10 @@ int rssitype_to_channelgroup() {
 int32_t transmitter_control_initialize()
 {
 	if (CarManualControlCommandInitialize() == -1
-			|| ReceiverActivityInitialize() == -1
-			|| CarManualControlSettingsInitialize() == -1) {
+			|| CarActuatorDesiredInitialize() == -1
+			|| CarManualControlSettingsInitialize() == -1
+			|| DrivingStatusInitialize() == -1 
+			|| ReceiverActivityInitialize() == -1) {
 		return -1;
 	}
 
@@ -160,16 +162,6 @@ int32_t transmitter_control_initialize()
 	// Main task loop
 	lastSysTime = PIOS_Thread_Systime();
 	return 0;
-}
-
-static float get_thrust_source(CarManualControlCommandData *manual_control_command, SystemSettingsAirframeTypeOptions * airframe_type, bool normalize_positive)
-{
-	float const thrust = (*airframe_type == SYSTEMSETTINGS_AIRFRAMETYPE_HELICP) ? manual_control_command->Collective : manual_control_command->Throttle;
-
-	// only valid for helicp, normalizes collective from [-1,1] to [0,1] for things like althold and loiter that are expecting to see a [0,1] command from throttle
-	if( normalize_positive && *airframe_type == SYSTEMSETTINGS_AIRFRAMETYPE_HELICP ) return (thrust + 1.0f)/2.0f;
-
-	return thrust;
 }
 
 /**
@@ -196,7 +188,7 @@ int32_t transmitter_control_update()
 	uint8_t arm_status;
 	DrivingStatusArmedGet(&arm_status);
 
-	if (arm_status == FLIGHTSTATUS_ARMED_DISARMED) {
+	if (arm_status == DRIVINGSTATUS_ARMED_DISARMED) {
 		if (updateRcvrActivity(&activity_fsm)) {
 			/* Reset the aging timer because activity was detected */
 			lastActivityTime = lastSysTime;
@@ -266,23 +258,17 @@ int32_t transmitter_control_update()
 		cmd.RawRssi = value;
 	}
 
-	bool valid_input_detected = true;
+	volatile bool valid_input_detected = true;
 
-	settings.ChannelNumber[0] = 1;
-	settings.ChannelNumber[1] = 2;
-	settings.ChannelNumber[2] = 3;
-	settings.ChannelNumber[3] = 4;
-	settings.ChannelNumber[4] = 5;
-	settings.ChannelNumber[5] = 6;
-	settings.ChannelNumber[6] = 7;
-	settings.ChannelNumber[7] = 8;
+	for(uint8_t n = 0; n < CARMANUALCONTROLCOMMAND_CHANNEL_NUMELEM; ++n)
+		settings.ChannelNumber[n] = n + 1;
 
 	// Read channel values in us
-	for (uint8_t n = 0;
+	for (volatile uint8_t n = 0;
 	     n < CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NUMELEM && n < CARMANUALCONTROLCOMMAND_CHANNEL_NUMELEM;
 	     ++n) {
 
-		if (settings.ChannelGroups[n] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) {
+		if (settings.ChannelGroups[n] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) {
 			cmd.Channel[n] = PIOS_RCVR_INVALID;
 			validChannel[n] = false;
 		} else {
@@ -295,7 +281,8 @@ int32_t transmitter_control_update()
 		if(cmd.Channel[n] == (uint16_t) PIOS_RCVR_TIMEOUT) {
 			valid_input_detected = false;
 			validChannel[n] = false;
-		} else {
+		} 
+		else {
 			scaledChannel[n] = scaleChannel(n, cmd.Channel[n]);
 			validChannel[n] = validInputRange(n, cmd.Channel[n], CONNECTION_OFFSET);
 		}
@@ -320,13 +307,13 @@ int32_t transmitter_control_update()
 		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] == (uint16_t) PIOS_RCVR_NODRIVER ||
 		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] == (uint16_t) PIOS_RCVR_NODRIVER ||
 		// Check the DrivingModeNumber is valid
-		settings.DrivingModeNumber < 1 || settings.DrivingModeNumber > CARMANUALCONTROLSETTINGS_FLIGHTMODEPOSITION_NUMELEM ||
+		settings.DrivingModeNumber < 1 || settings.DrivingModeNumber > CARMANUALCONTROLSETTINGS_DRIVINGMODEPOSITION_NUMELEM ||
 		// If we've got more than one possible valid DrivingMode, we require a configured DrivingMode channel
-		((settings.DrivingModeNumber > 1) && (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE)) ||
+		((settings.DrivingModeNumber > 1) && (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE)) ||
 		// Whenever DrivingMode channel is configured, it needs to be valid regardless of DrivingModeNumber settings
-		((settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] < CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) && (
-			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] == (uint16_t) PIOS_RCVR_INVALID ||
-			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] == (uint16_t) PIOS_RCVR_NODRIVER ))) {
+		((settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] < CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) && (
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] == (uint16_t) PIOS_RCVR_INVALID ||
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] == (uint16_t) PIOS_RCVR_NODRIVER ))) {
 
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_SETTINGS);
 
@@ -339,11 +326,11 @@ int32_t transmitter_control_update()
 	}
 
 	// the block above validates the input configuration. this simply checks that the range is valid if driving mode is configured.
-	bool drivingmode_valid_input = settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
-	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
+	bool drivingmode_valid_input = settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
+	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE];
 
 	// because arming is optional we must determine if it is needed before checking it is valid
-	bool arming_valid_input = (settings.Arming < MANUALCONTROLSETTINGS_ARMING_SWITCH) ||
+	bool arming_valid_input = (settings.Arming < CARMANUALCONTROLSETTINGS_ARMING_SWITCH) ||
 		validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING];
 
 	// decide if we have valid manual input or not
@@ -352,7 +339,12 @@ int32_t transmitter_control_update()
 	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] &&
 	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] &&
 	    drivingmode_valid_input &&
-	    arming_valid_input;
+		arming_valid_input;
+		
+	// JLinkRTTPrintf(0, "valid_input_detected: %ld ; drivingmode_valid_input: %ld ; arming_valid_input: %ld\n", valid_input_detected, drivingmode_valid_input, arming_valid_input);
+	// JLinkRTTPrintf(0, "Valid channel [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", validChannel[0], validChannel[1],
+	// validChannel[2],validChannel[3],validChannel[4],validChannel[5],validChannel[6], validChannel[7]);
+
 
 	// Implement hysteresis loop on connection status
 	if (valid_input_detected && (++connected_count > 10)) {
@@ -377,12 +369,12 @@ int32_t transmitter_control_update()
 
 		/* If all relevant channel groups aren't in error mode, then the receiver seems to be working fine.
 		   So if we still reach this point, the channel min/max/neutral values on the input page are faulty. */
-		bool rx_signal_detected = cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] < (uint16_t)PIOS_RCVR_NODRIVER &&
-			cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] < (uint16_t)PIOS_RCVR_NODRIVER &&
-			cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] < (uint16_t)PIOS_RCVR_NODRIVER &&
-			cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] < (uint16_t)PIOS_RCVR_NODRIVER &&
-			cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] < (uint16_t)PIOS_RCVR_NODRIVER &&
-			cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] < (uint16_t)PIOS_RCVR_NODRIVER;
+		bool rx_signal_detected = cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] < (uint16_t)PIOS_RCVR_NODRIVER &&
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] < (uint16_t)PIOS_RCVR_NODRIVER &&
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] < (uint16_t)PIOS_RCVR_NODRIVER &&
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] < (uint16_t)PIOS_RCVR_NODRIVER &&
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] < (uint16_t)PIOS_RCVR_NODRIVER &&
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] < (uint16_t)PIOS_RCVR_NODRIVER;
 
 		if (rx_signal_detected)
 			set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_CHANNELCONFIGURATION);
@@ -391,6 +383,7 @@ int32_t transmitter_control_update()
 
 	} else if (valid_input_detected) {
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_NONE);
+		JLinkWriteString(0, "SYSTEMALARMS_MANUALCONTROL_NONE");
 
 		// Scale channels to -1 -> +1 range
 		cmd.Roll           = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL];
@@ -399,7 +392,7 @@ int32_t transmitter_control_update()
 		cmd.Throttle       = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE];
 		cmd.ArmSwitch      = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] > 0 ?
 		                     CARMANUALCONTROLCOMMAND_ARMSWITCH_ARMED : CARMANUALCONTROLCOMMAND_ARMSWITCH_DISARMED;
-		driving_mode_value  = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
+		driving_mode_value  = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE];
 
 		// Apply deadband for Roll/Pitch/Yaw stick inputs
 		if (settings.Deadband) {
@@ -418,17 +411,6 @@ int32_t transmitter_control_update()
 		if (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0] !=
 			CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) {
 			cmd.Accessory[0] = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0];
-		}
-
-		// Set Accessory 1
-		if (settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY1] !=
-			MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) {
-			cmd.Accessory[1] = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY1];
-		}
-		// Set Accessory 2
-		if (settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY2] !=
-			MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) {
-			cmd.Accessory[2] = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY2];
 		}
 	}
 
@@ -454,46 +436,26 @@ int32_t transmitter_control_select(bool reset_controller)
 
 	CarManualControlCommandGet(&cmd);
 
-	SystemSettingsAirframeTypeGet(&airframe_type);
-
 	uint8_t drivingMode;
 	DrivingStatusDrivingModeGet(&drivingMode);
 
-	// Depending on the mode update the Stabilization object
-	static uint8_t lastDrivingMode = FLIGHTSTATUS_FLIGHTMODE_MANUAL;
+	// Depending on the mode update the Navigation object
+	static uint8_t lastDrivingMode = DRIVINGSTATUS_DRIVINGMODE_MANUAL;
 
 	switch(drivingMode) {
-	case FLIGHTSTATUS_FLIGHTMODE_MANUAL:
-	case FLIGHTSTATUS_FLIGHTMODE_ACRO:
-	case FLIGHTSTATUS_FLIGHTMODE_ACROPLUS:
-	case FLIGHTSTATUS_FLIGHTMODE_ACRODYNE:
-	case FLIGHTSTATUS_FLIGHTMODE_LEVELING:
-	case FLIGHTSTATUS_FLIGHTMODE_VIRTUALBAR:
-	case FLIGHTSTATUS_FLIGHTMODE_HORIZON:
-	case FLIGHTSTATUS_FLIGHTMODE_AXISLOCK:
-	case FLIGHTSTATUS_FLIGHTMODE_STABILIZED1:
-	case FLIGHTSTATUS_FLIGHTMODE_STABILIZED2:
-	case FLIGHTSTATUS_FLIGHTMODE_STABILIZED3:
-	case FLIGHTSTATUS_FLIGHTMODE_FAILSAFE:
-	case FLIGHTSTATUS_FLIGHTMODE_AUTOTUNE:
-		update_stabilization_desired(&cmd, &settings, &airframe_type);
+	case DRIVINGSTATUS_DRIVINGMODE_MANUAL:
+		update_actuator_desired(&cmd);
 		break;
-	case FLIGHTSTATUS_FLIGHTMODE_ALTITUDEHOLD:
-		altitude_hold_desired(&cmd, lastDrivingMode != drivingMode, &airframe_type);
-		break;
-	case FLIGHTSTATUS_FLIGHTMODE_POSITIONHOLD:
-		set_loiter_command(&cmd, &airframe_type);
-		break;
-	case FLIGHTSTATUS_FLIGHTMODE_RETURNTOHOME:
-		// The path planner module processes data here
-		break;
-	case FLIGHTSTATUS_FLIGHTMODE_PATHPLANNER:
+	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION1:
+	case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
+		update_navigation_desired(&cmd, &settings);
 		break;
 	default:
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_UNDEFINED);
 		return -1;
 	}
 	lastDrivingMode = drivingMode;
+	(void)lastDrivingMode;
 
 	return 0;
 }
@@ -690,19 +652,19 @@ static void process_transmitter_events(CarManualControlCommandData * cmd, CarMan
 
 	bool low_throt = cmd->Throttle <= 0;
 
-	if (low_throt) {
-		/* Determine whether to disarm when throttle is low */
-		uint8_t flt_mode;
-		DrivingStatusDrivingModeGet(&flt_mode);
+	// if (low_throt) {
+	// 	/* Determine whether to disarm when throttle is low */
+	// 	uint8_t drv_mode;
+	// 	DrivingStatusDrivingModeGet(&drv_mode);
 
-		if (flt_mode == FLIGHTSTATUS_FLIGHTMODE_POSITIONHOLD ||
-				flt_mode == FLIGHTSTATUS_FLIGHTMODE_RETURNTOHOME ||
-				flt_mode == FLIGHTSTATUS_FLIGHTMODE_PATHPLANNER  ||
-				flt_mode == FLIGHTSTATUS_FLIGHTMODE_ALTITUDEHOLD ||
-				flt_mode == FLIGHTSTATUS_FLIGHTMODE_TABLETCONTROL) {
-			low_throt = false;
-		}
-	}
+	// 	if (drv_mode == DRIVINGSTATUS_DRIVINGMODE_POSITIONHOLD ||
+	// 		drv_mode == DRIVINGSTATUS_DRIVINGMODE_RETURNTOHOME ||
+	// 		drv_mode == DRIVINGSTATUS_DRIVINGMODE_PATHPLANNER  ||
+	// 		drv_mode == DRIVINGSTATUS_DRIVINGMODE_ALTITUDEHOLD ||
+	// 		drv_mode == DRIVINGSTATUS_DRIVINGMODE_TABLETCONTROL) {
+	// 		low_throt = false;
+	// 	}
+	// }
 
 	if (low_throt) {
 		if (check_receiver_timer(settings->ArmedTimeout)) {
@@ -906,37 +868,17 @@ static bool updateRcvrActivity(struct rcvr_activity_fsm * fsm)
 	return (activity_updated);
 }
 
-static inline float scale_stabilization(StabilizationSettingsData *stabSettings,
-		float cmd, SharedDefsStabilizationModeOptions mode,
-		StabilizationDesiredStabilizationModeElem axis) {
+static inline float scale_navigation(NavigationSettingsData *navSettings,
+		float cmd, SharedDefsNavigationModeOptions mode,
+		NavigationDesiredNavigationModeElem axis) {
 	switch (mode) {
-		case SHAREDDEFS_STABILIZATIONMODE_DISABLED:
-		case SHAREDDEFS_STABILIZATIONMODE_FAILSAFE:
-		case SHAREDDEFS_STABILIZATIONMODE_POI:
+		case SHAREDDEFS_NAVIGATIONMODE_DISABLED:
+		case SHAREDDEFS_NAVIGATIONMODE_FAILSAFE:
 			return 0;
-		case SHAREDDEFS_STABILIZATIONMODE_MANUAL:
-		case SHAREDDEFS_STABILIZATIONMODE_VIRTUALBAR:
-		case SHAREDDEFS_STABILIZATIONMODE_COORDINATEDFLIGHT:
+		case SHAREDDEFS_NAVIGATIONMODE_MANUAL:
 			return cmd;
-		case SHAREDDEFS_STABILIZATIONMODE_SYSTEMIDENTRATE:
-		case SHAREDDEFS_STABILIZATIONMODE_RATE:
-		case SHAREDDEFS_STABILIZATIONMODE_WEAKLEVELING:
-		case SHAREDDEFS_STABILIZATIONMODE_AXISLOCK:
-			cmd = expoM(cmd, stabSettings->RateExpo[axis],
-					stabSettings->RateExponent[axis]*0.1f);
-			return cmd * stabSettings->ManualRate[axis];
-		case SHAREDDEFS_STABILIZATIONMODE_ACRODYNE:
-			// For acrodyne, pass the command through raw.
-			return cmd;
-		case SHAREDDEFS_STABILIZATIONMODE_ACROPLUS:
-			cmd = expoM(cmd, stabSettings->RateExpo[axis],
-					stabSettings->RateExponent[axis]*0.1f);
-			return cmd;
-		case SHAREDDEFS_STABILIZATIONMODE_SYSTEMIDENT:
-		case SHAREDDEFS_STABILIZATIONMODE_ATTITUDE:
-			return cmd * stabSettings->MaxLevelAngle[axis];
-		case SHAREDDEFS_STABILIZATIONMODE_HORIZON:
-			cmd = expo3(cmd, stabSettings->HorizonExpo[axis]);
+		case SHAREDDEFS_NAVIGATIONMODE_LINEFOLLOWING:
+			// For auto, pass the command through raw.
 			return cmd;
 	}
 
@@ -944,102 +886,48 @@ static inline float scale_stabilization(StabilizationSettingsData *stabSettings,
 	return 0;
 }
 
-//! In stabilization mode, set stabilization desired
-static void update_stabilization_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings, SystemSettingsAirframeTypeOptions * airframe_type)
+//! In manual mode directly set actuator desired
+static void update_actuator_desired(CarManualControlCommandData * cmd)
 {
-	StabilizationDesiredData stabilization;
-	StabilizationDesiredGet(&stabilization);
+	CarActuatorDesiredData actuator;
+	CarActuatorDesiredGet(&actuator);
+	actuator.Roll = cmd->Roll;
+	actuator.Pitch = cmd->Pitch;
+	actuator.Yaw = cmd->Yaw;
+	actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
+	CarActuatorDesiredSet(&actuator);
+}
 
-	StabilizationSettingsData stabSettings;
-	StabilizationSettingsGet(&stabSettings);
+//! In navigation mode, set navigation desired
+static void update_navigation_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings)
+{
+	NavigationDesiredData navigation;
+	NavigationDesiredGet(&navigation);
 
-	const uint8_t MANUAL_SETTINGS[3] = {
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_MANUAL,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_MANUAL,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_MANUAL };
-	const uint8_t RATE_SETTINGS[3] = {  STABILIZATIONDESIRED_STABILIZATIONMODE_RATE,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_RATE,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_AXISLOCK};
-	const uint8_t ATTITUDE_SETTINGS[3] = {
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_ATTITUDE,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_ATTITUDE,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_AXISLOCK};
-	const uint8_t VIRTUALBAR_SETTINGS[3] = {
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_VIRTUALBAR,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_VIRTUALBAR,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_AXISLOCK};
-	const uint8_t HORIZON_SETTINGS[3] = {
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_HORIZON,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_HORIZON,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_AXISLOCK};
-	const uint8_t AXISLOCK_SETTINGS[3] = {
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_AXISLOCK,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_AXISLOCK,
-	                                    STABILIZATIONDESIRED_STABILIZATIONMODE_AXISLOCK};
-	const uint8_t ACROPLUS_SETTINGS[3] = {  STABILIZATIONDESIRED_STABILIZATIONMODE_ACROPLUS,
-                                          STABILIZATIONDESIRED_STABILIZATIONMODE_ACROPLUS,
-                                          STABILIZATIONDESIRED_STABILIZATIONMODE_RATE};
+	NavigationSettingsData navSettings;
+	NavigationSettingsGet(&navSettings);
+										
+	const uint8_t NAVIGATION1_SETTINGS[3] = {  NAVIGATIONDESIRED_NAVIGATIONMODE_LINEFOLLOWING,
+										NAVIGATIONDESIRED_NAVIGATIONMODE_LINEFOLLOWING,
+										NAVIGATIONDESIRED_NAVIGATIONMODE_LINEFOLLOWING};	
 
-	const uint8_t ACRODYNE_SETTINGS[3] = {  STABILIZATIONDESIRED_STABILIZATIONMODE_ACRODYNE,
-                                          STABILIZATIONDESIRED_STABILIZATIONMODE_ACRODYNE,
-                                          STABILIZATIONDESIRED_STABILIZATIONMODE_ACRODYNE};
+	const uint8_t FAILSAFE_SETTINGS[3] = {  NAVIGATIONDESIRED_NAVIGATIONMODE_FAILSAFE,
+                                          NAVIGATIONDESIRED_NAVIGATIONMODE_FAILSAFE,
+                                          NAVIGATIONDESIRED_NAVIGATIONMODE_FAILSAFE};
 
-	const uint8_t FAILSAFE_SETTINGS[3] = {  STABILIZATIONDESIRED_STABILIZATIONMODE_FAILSAFE,
-                                          STABILIZATIONDESIRED_STABILIZATIONMODE_FAILSAFE,
-                                          STABILIZATIONDESIRED_STABILIZATIONMODE_RATE};
+	const uint8_t * nav_modes;
 
-	const uint8_t SYSTEMIDENT_SETTINGS[3] = {  STABILIZATIONDESIRED_STABILIZATIONMODE_SYSTEMIDENT,
-                                          STABILIZATIONDESIRED_STABILIZATIONMODE_SYSTEMIDENT,
-                                          STABILIZATIONDESIRED_STABILIZATIONMODE_SYSTEMIDENTRATE };
-	const uint8_t * stab_modes;
-
-	uint8_t reprojection = STABILIZATIONDESIRED_REPROJECTIONMODE_NONE;
+	uint8_t reprojection = NAVIGATIONDESIRED_REPROJECTIONMODE_NONE;
 
 	uint8_t drivingMode;
 
 	DrivingStatusDrivingModeGet(&drivingMode);
 	switch(drivingMode) {
-		case FLIGHTSTATUS_FLIGHTMODE_MANUAL:
-			stab_modes = MANUAL_SETTINGS;
+		case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION1:
+			nav_modes = NAVIGATION1_SETTINGS;
 			break;
-		case FLIGHTSTATUS_FLIGHTMODE_ACRO:
-			stab_modes = RATE_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_ACRODYNE:
-			stab_modes = ACRODYNE_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_ACROPLUS:
-			stab_modes = ACROPLUS_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_LEVELING:
-			stab_modes = ATTITUDE_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_VIRTUALBAR:
-			stab_modes = VIRTUALBAR_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_HORIZON:
-			stab_modes = HORIZON_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_AXISLOCK:
-			stab_modes = AXISLOCK_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_FAILSAFE:
-			stab_modes = FAILSAFE_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_AUTOTUNE:
-			stab_modes = SYSTEMIDENT_SETTINGS;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_STABILIZED1:
-			stab_modes = settings->Stabilization1Settings;
-			reprojection = settings->Stabilization1Reprojection;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_STABILIZED2:
-			stab_modes = settings->Stabilization2Settings;
-			reprojection = settings->Stabilization2Reprojection;
-			break;
-		case FLIGHTSTATUS_FLIGHTMODE_STABILIZED3:
-			stab_modes = settings->Stabilization3Settings;
-			reprojection = settings->Stabilization3Reprojection;
+		case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
+			nav_modes = FAILSAFE_SETTINGS;
 			break;
 		default:
 			{
@@ -1049,132 +937,118 @@ static void update_stabilization_desired(CarManualControlCommandData * manual_co
 			return;
 	}
 
-	stabilization.StabilizationMode[STABILIZATIONDESIRED_STABILIZATIONMODE_ROLL]  = stab_modes[0];
-	stabilization.StabilizationMode[STABILIZATIONDESIRED_STABILIZATIONMODE_PITCH] = stab_modes[1];
-	stabilization.StabilizationMode[STABILIZATIONDESIRED_STABILIZATIONMODE_YAW]   = stab_modes[2];
+	navigation.NavigationMode[NAVIGATIONDESIRED_NAVIGATIONMODE_ROLL]  = nav_modes[0];
+	navigation.NavigationMode[NAVIGATIONDESIRED_NAVIGATIONMODE_PITCH] = nav_modes[1];
+	navigation.NavigationMode[NAVIGATIONDESIRED_NAVIGATIONMODE_YAW]   = nav_modes[2];
 
-	stabilization.Roll = scale_stabilization(&stabSettings,
+	navigation.Roll = scale_navigation(&navSettings,
 			manual_control_command->Roll,
-			stab_modes[STABILIZATIONDESIRED_STABILIZATIONMODE_ROLL],
-			STABILIZATIONDESIRED_STABILIZATIONMODE_ROLL);
+			nav_modes[NAVIGATIONDESIRED_NAVIGATIONMODE_ROLL],
+			NAVIGATIONDESIRED_NAVIGATIONMODE_ROLL);
 
-	stabilization.Pitch = scale_stabilization(&stabSettings,
+	navigation.Pitch = scale_navigation(&navSettings,
 			manual_control_command->Pitch,
-			stab_modes[STABILIZATIONDESIRED_STABILIZATIONMODE_PITCH],
-			STABILIZATIONDESIRED_STABILIZATIONMODE_PITCH);
+			nav_modes[NAVIGATIONDESIRED_NAVIGATIONMODE_PITCH],
+			NAVIGATIONDESIRED_NAVIGATIONMODE_PITCH);
 
-	stabilization.Yaw = scale_stabilization(&stabSettings,
+	navigation.Yaw = scale_navigation(&navSettings,
 			manual_control_command->Yaw,
-			stab_modes[STABILIZATIONDESIRED_STABILIZATIONMODE_YAW],
-			STABILIZATIONDESIRED_STABILIZATIONMODE_YAW);
+			nav_modes[NAVIGATIONDESIRED_NAVIGATIONMODE_YAW],
+			NAVIGATIONDESIRED_NAVIGATIONMODE_YAW);
 
 	// get thrust source; normalize_positive = false since we just want to pass the value through
-	stabilization.Thrust = get_thrust_source(manual_control_command, airframe_type, false);
+	navigation.Thrust = manual_control_command->Throttle;
 
 	// for non-helicp, negative thrust is a special flag to stop the motors
-	if( *airframe_type != SYSTEMSETTINGS_AIRFRAMETYPE_HELICP && stabilization.Thrust < 0 ) stabilization.Thrust = -1;
+	if(navigation.Thrust < 0 ) navigation.Thrust = -1;
 
 	// Set the reprojection.
-	stabilization.ReprojectionMode = reprojection;
+	navigation.ReprojectionMode = reprojection;
 
-	StabilizationDesiredSet(&stabilization);
+	NavigationDesiredSet(&navigation);
 }
 
 /**
  * @brief Update the altitude desired to current altitude when
- * enabled and enable altitude mode for stabilization
+ * enabled and enable altitude mode for navigation
  */
-static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type)
-{
-	if (AltitudeHoldDesiredHandle() == NULL) {
-		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_ALTITUDEHOLD);
-		return;
-	}
+// static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type)
+// {
+// 	if (AltitudeHoldDesiredHandle() == NULL) {
+// 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_ALTITUDEHOLD);
+// 		return;
+// 	}
 
-	const float MIN_CLIMB_RATE = 0.01f;
+// 	const float MIN_CLIMB_RATE = 0.01f;
 
-	AltitudeHoldDesiredData altitudeHoldDesired;
-	AltitudeHoldDesiredGet(&altitudeHoldDesired);
+// 	AltitudeHoldDesiredData altitudeHoldDesired;
+// 	AltitudeHoldDesiredGet(&altitudeHoldDesired);
 
-	StabilizationSettingsData stabSettings;
-	StabilizationSettingsGet(&stabSettings);
+// 	NavigationSettingsData navSettings;
+// 	NavigationSettingsGet(&navSettings);
 
-	altitudeHoldDesired.Roll = cmd->Roll * stabSettings.RollMax;
-	altitudeHoldDesired.Pitch = cmd->Pitch * stabSettings.PitchMax;
-	altitudeHoldDesired.Yaw = cmd->Yaw * stabSettings.ManualRate[STABILIZATIONSETTINGS_MANUALRATE_YAW];
+// 	altitudeHoldDesired.Roll = cmd->Roll * navSettings.RollMax;
+// 	altitudeHoldDesired.Pitch = cmd->Pitch * navSettings.PitchMax;
+// 	altitudeHoldDesired.Yaw = cmd->Yaw * navSettings.ManualRate[NAVIGATIONSETTINGS_MANUALRATE_YAW];
 
-	float current_down;
-	PositionActualDownGet(&current_down);
+// 	float current_down;
+// 	PositionActualDownGet(&current_down);
 
-	if(drivingModeChanged) {
-		// Initialize at the current location. Note that this object uses the up is positive
-		// convention.
-		altitudeHoldDesired.Altitude = -current_down;
-		altitudeHoldDesired.ClimbRate = 0;
-	} else {
-		uint8_t altitude_hold_expo;
-		uint8_t altitude_hold_maxclimbrate10;
-		uint8_t altitude_hold_maxdescentrate10;
-		uint8_t altitude_hold_deadband;
-		AltitudeHoldSettingsMaxClimbRateGet(&altitude_hold_maxclimbrate10);
-		AltitudeHoldSettingsMaxDescentRateGet(&altitude_hold_maxdescentrate10);
+// 	if(drivingModeChanged) {
+// 		// Initialize at the current location. Note that this object uses the up is positive
+// 		// convention.
+// 		altitudeHoldDesired.Altitude = -current_down;
+// 		altitudeHoldDesired.ClimbRate = 0;
+// 	} else {
+// 		uint8_t altitude_hold_expo;
+// 		uint8_t altitude_hold_maxclimbrate10;
+// 		uint8_t altitude_hold_maxdescentrate10;
+// 		uint8_t altitude_hold_deadband;
+// 		AltitudeHoldSettingsMaxClimbRateGet(&altitude_hold_maxclimbrate10);
+// 		AltitudeHoldSettingsMaxDescentRateGet(&altitude_hold_maxdescentrate10);
 
-		// Scale altitude hold rate
-		float altitude_hold_maxclimbrate = altitude_hold_maxclimbrate10 * 0.1f;
-		float altitude_hold_maxdescentrate = altitude_hold_maxdescentrate10 * 0.1f;
+// 		// Scale altitude hold rate
+// 		float altitude_hold_maxclimbrate = altitude_hold_maxclimbrate10 * 0.1f;
+// 		float altitude_hold_maxdescentrate = altitude_hold_maxdescentrate10 * 0.1f;
 
-		AltitudeHoldSettingsExpoGet(&altitude_hold_expo);
-		AltitudeHoldSettingsDeadbandGet(&altitude_hold_deadband);
+// 		AltitudeHoldSettingsExpoGet(&altitude_hold_expo);
+// 		AltitudeHoldSettingsDeadbandGet(&altitude_hold_deadband);
 
-		const float DEADBAND_HIGH = 0.50f +
-			(altitude_hold_deadband / 2.0f) * 0.01f;
-		const float DEADBAND_LOW = 0.50f -
-			(altitude_hold_deadband / 2.0f) * 0.01f;
+// 		const float DEADBAND_HIGH = 0.50f +
+// 			(altitude_hold_deadband / 2.0f) * 0.01f;
+// 		const float DEADBAND_LOW = 0.50f -
+// 			(altitude_hold_deadband / 2.0f) * 0.01f;
 
-		float const thrust_source = get_thrust_source(cmd, airframe_type, true);
+// 		float const thrust_source = get_thrust_source(cmd, airframe_type, true);
 
-		float climb_rate = 0.0f;
-		if (thrust_source > DEADBAND_HIGH) {
-			climb_rate = expo3((thrust_source - DEADBAND_HIGH) / (1.0f - DEADBAND_HIGH), altitude_hold_expo) *
-		                         altitude_hold_maxclimbrate;
-		} else if (thrust_source < DEADBAND_LOW && altitude_hold_maxdescentrate > MIN_CLIMB_RATE) {
-			climb_rate = ((thrust_source < 0) ? DEADBAND_LOW : DEADBAND_LOW - thrust_source) / DEADBAND_LOW;
-			climb_rate = -expo3(climb_rate, altitude_hold_expo) * altitude_hold_maxdescentrate;
-		}
+// 		float climb_rate = 0.0f;
+// 		if (thrust_source > DEADBAND_HIGH) {
+// 			climb_rate = expo3((thrust_source - DEADBAND_HIGH) / (1.0f - DEADBAND_HIGH), altitude_hold_expo) *
+// 		                         altitude_hold_maxclimbrate;
+// 		} else if (thrust_source < DEADBAND_LOW && altitude_hold_maxdescentrate > MIN_CLIMB_RATE) {
+// 			climb_rate = ((thrust_source < 0) ? DEADBAND_LOW : DEADBAND_LOW - thrust_source) / DEADBAND_LOW;
+// 			climb_rate = -expo3(climb_rate, altitude_hold_expo) * altitude_hold_maxdescentrate;
+// 		}
 
-		// When throttle is negative tell the module that we are in landing mode
-		altitudeHoldDesired.Land = (thrust_source < 0) ? ALTITUDEHOLDDESIRED_LAND_TRUE : ALTITUDEHOLDDESIRED_LAND_FALSE;
+// 		// When throttle is negative tell the module that we are in landing mode
+// 		altitudeHoldDesired.Land = (thrust_source < 0) ? ALTITUDEHOLDDESIRED_LAND_TRUE : ALTITUDEHOLDDESIRED_LAND_FALSE;
 
-		// If more than MIN_CLIMB_RATE enter vario mode
-		if (fabsf(climb_rate) > MIN_CLIMB_RATE) {
-			// Desired state is at the current location with the requested rate
-			altitudeHoldDesired.Altitude = -current_down;
-			altitudeHoldDesired.ClimbRate = climb_rate;
-		} else {
-			// Here we intentionally do not change the set point, it will
-			// remain where the user released vario mode
-			altitudeHoldDesired.ClimbRate = 0.0f;
-		}
-	}
+// 		// If more than MIN_CLIMB_RATE enter vario mode
+// 		if (fabsf(climb_rate) > MIN_CLIMB_RATE) {
+// 			// Desired state is at the current location with the requested rate
+// 			altitudeHoldDesired.Altitude = -current_down;
+// 			altitudeHoldDesired.ClimbRate = climb_rate;
+// 		} else {
+// 			// Here we intentionally do not change the set point, it will
+// 			// remain where the user released vario mode
+// 			altitudeHoldDesired.ClimbRate = 0.0f;
+// 		}
+// 	}
 
-	// Must always set since this contains the control signals
-	AltitudeHoldDesiredSet(&altitudeHoldDesired);
-}
+// 	// Must always set since this contains the control signals
+// 	AltitudeHoldDesiredSet(&altitudeHoldDesired);
+// }
 
-
-static void set_loiter_command(CarManualControlCommandData *cmd, SystemSettingsAirframeTypeOptions *airframe_type)
-{
-	LoiterCommandData loiterCommand;
-
-	loiterCommand.Pitch = cmd->Pitch;
-	loiterCommand.Roll = cmd->Roll;
-
-	loiterCommand.Thrust = get_thrust_source(cmd, airframe_type, true);
-
-	loiterCommand.Frame = LOITERCOMMAND_FRAME_BODY;
-
-	LoiterCommandSet(&loiterCommand);
-}
 
 /**
  * Convert channel from servo pulse duration (microseconds) to scaled -1/+1 range.

@@ -56,7 +56,7 @@ extern uintptr_t pios_can_id;
 #define STACK_SIZE_BYTES 1200
 #endif
 
-#define TASK_PRIORITY PIOS_THREAD_PRIO_HIGHEST
+#define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
 #define UPDATE_PERIOD_MS 500
 
 #define CAN_RX_TIMEOUT_MS 10
@@ -109,25 +109,25 @@ static void testTask(void *parameters)
 		PIOS_ANNUNC_Toggle(PIOS_LED_HEARTBEAT);
 		//SEGGER_RTT_WriteString(0, "segger rtt test\n");
 
-		struct pios_can_gimbal_message bgc_message = {
-			.fc_roll = 1,
-			.fc_pitch = 2,
-			.fc_yaw = 3,
-			.setpoint_roll = 2,
-			.setpoint_pitch = 16,
-			.setpoint_yaw = 32};
+		// struct pios_can_gimbal_message bgc_message = {
+		// 	.fc_roll = 1,
+		// 	.fc_pitch = 2,
+		// 	.fc_yaw = 3,
+		// 	.setpoint_roll = 2,
+		// 	.setpoint_pitch = 16,
+		// 	.setpoint_yaw = 32};
 
-		PIOS_CAN_TxData(pios_can_id, PIOS_CAN_GIMBAL, (uint8_t *)&bgc_message);
+		// PIOS_CAN_TxData(pios_can_id, PIOS_CAN_GIMBAL, (uint8_t *)&bgc_message);
 
-		UAVObjEvent ev;
-		if (PIOS_Queue_Receive(queue, &ev, CAN_RX_TIMEOUT_MS))
-		{
-			JLinkWriteString(0, "CAN msg received\n");
-		}
-		else
-		{
-			JLinkWriteString(0, "---");
-		}
+		// UAVObjEvent ev;
+		// if (PIOS_Queue_Receive(queue, &ev, CAN_RX_TIMEOUT_MS))
+		// {
+		// 	JLinkWriteString(0, "CAN msg received\n");
+		// }
+		// else
+		// {
+		// 	JLinkWriteString(0, "---");
+		// }
 
 		// Wait until next update
 		//PIOS_RCVR_WaitActivity(UPDATE_PERIOD_MS);

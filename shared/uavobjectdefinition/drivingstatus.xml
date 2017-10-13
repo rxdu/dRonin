@@ -5,7 +5,7 @@
 		<field name="Armed" units="" type="enum" elements="1" options="Disarmed,Arming,Armed" defaultvalue="Disarmed"/>
 		<field name="DrivingMode" units="" type="enum" elements="1" parent="SharedDefs.DrivingMode"/>
 		<!-- Indicate what submodule is in control -->
-		<field name="ControlSource" units="" type="enum" elements="1" options="Geofence,Failsafe,Transmitter,Tablet" defaultvalue="Failsafe"/>
+		<field name="ControlSource" units="" type="enum" elements="1" options="Failsafe,Transmitter" defaultvalue="Failsafe"/>
 		<access gcs="readwrite" flight="readwrite"/>
 		<telemetrygcs acked="false" updatemode="manual" period="0"/>
 		<telemetryflight acked="false" updatemode="onchange" period="5000"/>
