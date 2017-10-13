@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "pios.h": "c",
+        "pios_config.h": "c",
+        "hwrevolution.h": "c",
+        "pios_board_info.h": "c",
+        "openpilot.h": "c",
+        "stm32f4xx_iwdg.h": "c",
+        "systemalarms.h": "c",
+        "systemsettings.h": "c",
+        "transmitter_control.h": "c"
+    }
+}

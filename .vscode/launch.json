@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "debug_fw_piracer",
+            "type": "cppdbg",
+            "request": "launch",
+            "miDebuggerPath": "${workspaceRoot}/tools/gcc-arm-none-eabi-5_2-2015q4/bin/arm-none-eabi-gdb",
+            "targetArchitecture": "arm",
+            "program": "${workspaceRoot}/build/fw_pixracer/fw_pixracer.elf",
+            "setupCommands": [
+                { "text": "file ${workspaceRoot}/build/fw_pixracer/fw_pixracer.elf" },
+                { "text": "target remote localhost:2331" },
+                { "text": "monitor reset" },
+                { "text": "load" },
+                { "text": "monitor reset"}
+            ],
+            "preLaunchTask": "make_fw_pixracer",
+            "launchCompleteCommand": "None",
+            "externalConsole": false,
+            "cwd": "${workspaceRoot}"
+        }
+    ]
+}
+    

@@ -10,12 +10,12 @@
  * to determine if the system is currently controlled by failsafe, transmitter,
  * or a tablet.  The transmitter values are read out and stored in @ref
  * ManualControlCommand.  The tablet sends values via @ref TabletInfo which
- * may be used if the flight mode switch is in the appropriate position. The
+ * may be used if the driving mode switch is in the appropriate position. The
  * transmitter settings come from @ref ManualControlSettings.
  *
  * @file       manualcontrol.c
  * @author     Tau Labs, http://taulabs.org, Copyright (C) 2013-2016
- * @brief      ManualControl module. Handles safety R/C link and flight mode.
+ * @brief      ManualControl module. Handles safety R/C link and driving mode.
  *
  * @see        The GNU Public License (GPL) Version 3
  *
@@ -44,7 +44,7 @@
 #include "failsafe_control.h"
 #include "transmitter_control.h"
 
-#include "flightstatus.h"
+#include "drivingstatus.h"
 #include "carmanualcontrolcommand.h"
 #include "carmanualcontrolsettings.h"
 #include "systemalarms.h"
@@ -64,7 +64,7 @@ static struct pios_thread *taskHandle;
 
 // Private functions
 static void manualControlTask(void *parameters);
-static FlightStatusControlSourceOptions control_source_select();
+static DrivingStatusControlSourceOptions control_source_select();
 
 bool vehicle_is_armed = false;
 
@@ -92,7 +92,7 @@ int32_t ManualControlStart()
 int32_t ManualControlInitialize()
 {
 	if (failsafe_control_initialize() == -1 \
-		|| FlightStatusInitialize() == -1 \
+		|| DrivingStatusInitialize() == -1 \
 		|| transmitter_control_initialize() == -1) {
 	
 		return -1;
@@ -109,10 +109,10 @@ MODULE_HIPRI_INITCALL(ManualControlInitialize, ManualControlStart);
 static void manualControlTask(void *parameters)
 {
 	/* Make sure disarmed on power up */
-	FlightStatusData flightStatus;
-	FlightStatusGet(&flightStatus);
-	flightStatus.Armed = FLIGHTSTATUS_ARMED_DISARMED;
-	FlightStatusSet(&flightStatus);
+	DrivingStatusData drivingStatus;
+	DrivingStatusGet(&drivingStatus);
+	drivingStatus.Armed = FLIGHTSTATUS_ARMED_DISARMED;
+	DrivingStatusSet(&drivingStatus);
 
 	// Select failsafe before run
 	failsafe_control_select(true);
@@ -136,11 +136,11 @@ static void manualControlTask(void *parameters)
 		failsafe_control_update();
 		transmitter_control_update();
 
-		// Initialize to invalid value to ensure first update sets FlightStatus
-		static FlightStatusControlSourceOptions last_control_selection = -1;
+		// Initialize to invalid value to ensure first update sets DrivingStatus
+		static DrivingStatusControlSourceOptions last_control_selection = -1;
 
 		// Control logic to select the valid controller
-		FlightStatusControlSourceOptions control_selection =
+		DrivingStatusControlSourceOptions control_selection =
 			control_source_select();
 		bool reset_controller = control_selection != last_control_selection;
 
@@ -167,7 +167,7 @@ static void manualControlTask(void *parameters)
 		}
 
 		if (control_selection != last_control_selection) {
-			FlightStatusControlSourceSet(&control_selection);
+			DrivingStatusControlSourceSet(&control_selection);
 			last_control_selection = control_selection;
 		}
 
@@ -284,9 +284,9 @@ static void manualControlTask(void *parameters)
 				break;
 		}
 
-		FlightStatusArmedOptions armed, prev_armed;
+		DrivingStatusArmedOptions armed, prev_armed;
 
-		FlightStatusArmedGet(&prev_armed);
+		DrivingStatusArmedGet(&prev_armed);
 
 		switch (arm_state) {
 			default:
@@ -314,7 +314,7 @@ static void manualControlTask(void *parameters)
 		}
 
 		if (armed != prev_armed) {
-			FlightStatusArmedSet(&armed);
+			DrivingStatusArmedSet(&armed);
 		}
 
 		// Wait until next update
@@ -326,15 +326,15 @@ static void manualControlTask(void *parameters)
 
 /**
  * @brief control_source_select Determine which sub-module to use
- * for the main control source of the flight controller.
- * @returns @ref FlightStatusControlSourceOptions indicating the selected
+ * for the main control source of the driving controller.
+ * @returns @ref DrivingStatusControlSourceOptions indicating the selected
  * mode
  *
  * This function is the ultimate one that controls what happens and
  * selects modes such as failsafe, transmitter control, geofencing
  * and potentially other high level modes in the future
  */
-static FlightStatusControlSourceOptions control_source_select()
+static DrivingStatusControlSourceOptions control_source_select()
 {
 	CarManualControlCommandData cmd;
 	CarManualControlCommandGet(&cmd);
@@ -367,10 +367,10 @@ bool ok_to_arm(void)
 		}
 	}
 
-	uint8_t flight_mode;
-	FlightStatusFlightModeGet(&flight_mode);
+	uint8_t driving_mode;
+	DrivingStatusDrivingModeGet(&driving_mode);
 
-	if (flight_mode == FLIGHTSTATUS_FLIGHTMODE_FAILSAFE) {
+	if (driving_mode == FLIGHTSTATUS_FLIGHTMODE_FAILSAFE) {
 		/* Separately mask FAILSAFE arming here. */
 		return false;
 	}

@@ -9,7 +9,7 @@
  * @author     dRonin, http://dRonin.org/, Copyright (C) 2015-2016
  * @author     Tau Labs, http://taulabs.org, Copyright (C) 2012-2017
  * @author     The OpenPilot Team, http://www.openpilot.org Copyright (C) 2010.
- * @brief      Handles R/C link and flight mode.
+ * @brief      Handles R/C link and driving mode.
  *
  * @see        The GNU Public License (GPL) Version 3
  *
@@ -42,7 +42,7 @@
 #include "altitudeholdsettings.h"
 #include "baroaltitude.h"
 #include "flighttelemetrystats.h"
-#include "flightstatus.h"
+#include "drivingstatus.h"
 #include "loitercommand.h"
 #include "pathdesired.h"
 #include "positionactual.h"
@@ -97,15 +97,15 @@ static uint8_t                    connected_count = 0;
 static struct rcvr_activity_fsm   activity_fsm;
 static uint32_t                   lastActivityTime;
 static uint32_t                   lastSysTime;
-static float                      flight_mode_value;
+static float                      driving_mode_value;
 static enum control_status        control_status;
 static bool                       settings_updated;
 
 // Private functions
 static float get_thrust_source(CarManualControlCommandData *manual_control_command, SystemSettingsAirframeTypeOptions * airframe_type, bool normalize_positive);
 static void update_stabilization_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings, SystemSettingsAirframeTypeOptions * airframe_type);
-static void altitude_hold_desired(CarManualControlCommandData * cmd, bool flightModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
-static void set_flight_mode();
+static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
+static void set_driving_mode();
 static void process_transmitter_events(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings, bool valid);
 static void set_manual_control_error(SystemAlarmsManualControlOptions errorCode);
 static float scaleChannel(int n, int16_t value);
@@ -177,7 +177,7 @@ static float get_thrust_source(CarManualControlCommandData *manual_control_comma
   *
   * This will always process the arming signals as for now the transmitter
   * is always in charge.  When a transmitter is not detected control will
-  * fall back to the failsafe module.  If the flight mode is in tablet
+  * fall back to the failsafe module.  If the driving mode is in tablet
   * control position then control will be ceeded to that module.
   */
 int32_t transmitter_control_update()
@@ -194,7 +194,7 @@ int32_t transmitter_control_update()
 
 	/* Update channel activity monitor */
 	uint8_t arm_status;
-	FlightStatusArmedGet(&arm_status);
+	DrivingStatusArmedGet(&arm_status);
 
 	if (arm_status == FLIGHTSTATUS_ARMED_DISARMED) {
 		if (updateRcvrActivity(&activity_fsm)) {
@@ -319,11 +319,11 @@ int32_t transmitter_control_update()
 		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] == (uint16_t) PIOS_RCVR_NODRIVER ||
 		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] == (uint16_t) PIOS_RCVR_NODRIVER ||
 		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] == (uint16_t) PIOS_RCVR_NODRIVER ||
-		// Check the FlightModeNumber is valid
-		settings.FlightModeNumber < 1 || settings.FlightModeNumber > CARMANUALCONTROLSETTINGS_FLIGHTMODEPOSITION_NUMELEM ||
-		// If we've got more than one possible valid FlightMode, we require a configured FlightMode channel
-		((settings.FlightModeNumber > 1) && (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE)) ||
-		// Whenever FlightMode channel is configured, it needs to be valid regardless of FlightModeNumber settings
+		// Check the DrivingModeNumber is valid
+		settings.DrivingModeNumber < 1 || settings.DrivingModeNumber > CARMANUALCONTROLSETTINGS_FLIGHTMODEPOSITION_NUMELEM ||
+		// If we've got more than one possible valid DrivingMode, we require a configured DrivingMode channel
+		((settings.DrivingModeNumber > 1) && (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE)) ||
+		// Whenever DrivingMode channel is configured, it needs to be valid regardless of DrivingModeNumber settings
 		((settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] < CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) && (
 			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] == (uint16_t) PIOS_RCVR_INVALID ||
 			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] == (uint16_t) PIOS_RCVR_NODRIVER ))) {
@@ -338,8 +338,8 @@ int32_t transmitter_control_update()
 		return -1;
 	}
 
-	// the block above validates the input configuration. this simply checks that the range is valid if flight mode is configured.
-	bool flightmode_valid_input = settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
+	// the block above validates the input configuration. this simply checks that the range is valid if driving mode is configured.
+	bool drivingmode_valid_input = settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
 	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
 
 	// because arming is optional we must determine if it is needed before checking it is valid
@@ -351,7 +351,7 @@ int32_t transmitter_control_update()
 	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] &&
 	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] &&
 	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] &&
-	    flightmode_valid_input &&
+	    drivingmode_valid_input &&
 	    arming_valid_input;
 
 	// Implement hysteresis loop on connection status
@@ -399,7 +399,7 @@ int32_t transmitter_control_update()
 		cmd.Throttle       = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE];
 		cmd.ArmSwitch      = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] > 0 ?
 		                     CARMANUALCONTROLCOMMAND_ARMSWITCH_ARMED : CARMANUALCONTROLCOMMAND_ARMSWITCH_DISARMED;
-		flight_mode_value  = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
+		driving_mode_value  = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
 
 		// Apply deadband for Roll/Pitch/Yaw stick inputs
 		if (settings.Deadband) {
@@ -449,20 +449,20 @@ int32_t transmitter_control_update()
  */
 int32_t transmitter_control_select(bool reset_controller)
 {
-	// Activate the flight mode corresponding to the switch position
-	set_flight_mode();
+	// Activate the driving mode corresponding to the switch position
+	set_driving_mode();
 
 	CarManualControlCommandGet(&cmd);
 
 	SystemSettingsAirframeTypeGet(&airframe_type);
 
-	uint8_t flightMode;
-	FlightStatusFlightModeGet(&flightMode);
+	uint8_t drivingMode;
+	DrivingStatusDrivingModeGet(&drivingMode);
 
 	// Depending on the mode update the Stabilization object
-	static uint8_t lastFlightMode = FLIGHTSTATUS_FLIGHTMODE_MANUAL;
+	static uint8_t lastDrivingMode = FLIGHTSTATUS_FLIGHTMODE_MANUAL;
 
-	switch(flightMode) {
+	switch(drivingMode) {
 	case FLIGHTSTATUS_FLIGHTMODE_MANUAL:
 	case FLIGHTSTATUS_FLIGHTMODE_ACRO:
 	case FLIGHTSTATUS_FLIGHTMODE_ACROPLUS:
@@ -479,7 +479,7 @@ int32_t transmitter_control_select(bool reset_controller)
 		update_stabilization_desired(&cmd, &settings, &airframe_type);
 		break;
 	case FLIGHTSTATUS_FLIGHTMODE_ALTITUDEHOLD:
-		altitude_hold_desired(&cmd, lastFlightMode != flightMode, &airframe_type);
+		altitude_hold_desired(&cmd, lastDrivingMode != drivingMode, &airframe_type);
 		break;
 	case FLIGHTSTATUS_FLIGHTMODE_POSITIONHOLD:
 		set_loiter_command(&cmd, &airframe_type);
@@ -493,7 +493,7 @@ int32_t transmitter_control_select(bool reset_controller)
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_UNDEFINED);
 		return -1;
 	}
-	lastFlightMode = flightMode;
+	lastDrivingMode = drivingMode;
 
 	return 0;
 }
@@ -504,15 +504,15 @@ enum control_status transmitter_control_get_status()
 	return control_status;
 }
 
-//! Determine which of N positions the flight mode switch is in but do not set it
-uint8_t transmitter_control_get_flight_mode()
+//! Determine which of N positions the driving mode switch is in but do not set it
+uint8_t transmitter_control_get_driving_mode()
 {
-	// Convert flightMode value into the switch position in the range [0..N-1]
-	uint8_t pos = ((int16_t)(flight_mode_value * 256.0f) + 256) * settings.FlightModeNumber >> 9;
-	if (pos >= settings.FlightModeNumber)
-		pos = settings.FlightModeNumber - 1;
+	// Convert drivingMode value into the switch position in the range [0..N-1]
+	uint8_t pos = ((int16_t)(driving_mode_value * 256.0f) + 256) * settings.DrivingModeNumber >> 9;
+	if (pos >= settings.DrivingModeNumber)
+		pos = settings.DrivingModeNumber - 1;
 
-	return settings.FlightModePosition[pos];
+	return settings.DrivingModePosition[pos];
 }
 
 /**
@@ -693,7 +693,7 @@ static void process_transmitter_events(CarManualControlCommandData * cmd, CarMan
 	if (low_throt) {
 		/* Determine whether to disarm when throttle is low */
 		uint8_t flt_mode;
-		FlightStatusFlightModeGet(&flt_mode);
+		DrivingStatusDrivingModeGet(&flt_mode);
 
 		if (flt_mode == FLIGHTSTATUS_FLIGHTMODE_POSITIONHOLD ||
 				flt_mode == FLIGHTSTATUS_FLIGHTMODE_RETURNTOHOME ||
@@ -755,17 +755,17 @@ static void process_transmitter_events(CarManualControlCommandData * cmd, CarMan
 }
 
 
-//! Determine which of N positions the flight mode switch is in and set flight mode accordingly
-static void set_flight_mode()
+//! Determine which of N positions the driving mode switch is in and set driving mode accordingly
+static void set_driving_mode()
 {
-	uint8_t new_mode = transmitter_control_get_flight_mode();
+	uint8_t new_mode = transmitter_control_get_driving_mode();
 
-	FlightStatusFlightModeOptions cur_mode;
+	DrivingStatusDrivingModeOptions cur_mode;
 
-	FlightStatusFlightModeGet(&cur_mode);
+	DrivingStatusDrivingModeGet(&cur_mode);
 
 	if (cur_mode != new_mode) {
-		FlightStatusFlightModeSet(&new_mode);
+		DrivingStatusDrivingModeSet(&new_mode);
 	}
 }
 
@@ -995,10 +995,10 @@ static void update_stabilization_desired(CarManualControlCommandData * manual_co
 
 	uint8_t reprojection = STABILIZATIONDESIRED_REPROJECTIONMODE_NONE;
 
-	uint8_t flightMode;
+	uint8_t drivingMode;
 
-	FlightStatusFlightModeGet(&flightMode);
-	switch(flightMode) {
+	DrivingStatusDrivingModeGet(&drivingMode);
+	switch(drivingMode) {
 		case FLIGHTSTATUS_FLIGHTMODE_MANUAL:
 			stab_modes = MANUAL_SETTINGS;
 			break;
@@ -1084,7 +1084,7 @@ static void update_stabilization_desired(CarManualControlCommandData * manual_co
  * @brief Update the altitude desired to current altitude when
  * enabled and enable altitude mode for stabilization
  */
-static void altitude_hold_desired(CarManualControlCommandData * cmd, bool flightModeChanged, SystemSettingsAirframeTypeOptions * airframe_type)
+static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type)
 {
 	if (AltitudeHoldDesiredHandle() == NULL) {
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_ALTITUDEHOLD);
@@ -1106,7 +1106,7 @@ static void altitude_hold_desired(CarManualControlCommandData * cmd, bool flight
 	float current_down;
 	PositionActualDownGet(&current_down);
 
-	if(flightModeChanged) {
+	if(drivingModeChanged) {
 		// Initialize at the current location. Note that this object uses the up is positive
 		// convention.
 		altitudeHoldDesired.Altitude = -current_down;
