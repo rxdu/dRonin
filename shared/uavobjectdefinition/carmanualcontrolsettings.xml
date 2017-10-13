@@ -2,7 +2,7 @@
 <xml>
 	<object name="CarManualControlSettings" singleinstance="true" settings="true">
 		<description>Settings to indicate how to decode receiver input by @ref ManualControlModule.</description>
-		<field name="ChannelGroups" units="Channel Group" type="enum" defaultvalue="None">
+		<field name="ChannelGroups" units="Channel Group" type="enum" defaultvalue="PPM">
 			<description/>
 			<elementnames>
 				<elementname>Throttle</elementname>

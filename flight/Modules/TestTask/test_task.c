@@ -56,10 +56,10 @@ extern uintptr_t pios_can_id;
 #define STACK_SIZE_BYTES 1200
 #endif
 
-#define TASK_PRIORITY PIOS_THREAD_PRIO_NORMAL
+#define TASK_PRIORITY PIOS_THREAD_PRIO_HIGHEST
 #define UPDATE_PERIOD_MS 500
 
-#define CAN_RX_TIMEOUT_MS 500
+#define CAN_RX_TIMEOUT_MS 10
 
 // Private variables
 static struct pios_queue *queue;

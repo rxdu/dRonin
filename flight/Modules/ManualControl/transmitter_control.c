@@ -51,6 +51,8 @@
 
 #include "misc_math.h"
 
+#include "jlink_rtt.h"
+
 #if defined(PIOS_INCLUDE_OPENLRS_RCVR)
 #include "pios_openlrs.h"
 #endif /* PIOS_INCLUDE_OPENLRS_RCVR */
@@ -86,8 +88,8 @@ struct rcvr_activity_fsm {
 extern uintptr_t pios_rcvr_group_map[];
 
 // Private variables
-static ManualControlCommandData   cmd;
-static ManualControlSettingsData  settings;
+static CarManualControlCommandData   cmd;
+static CarManualControlSettingsData  settings;
 
 static SystemSettingsAirframeTypeOptions airframe_type;
 static uint8_t                    disconnected_count = 0;
@@ -100,11 +102,11 @@ static enum control_status        control_status;
 static bool                       settings_updated;
 
 // Private functions
-static float get_thrust_source(ManualControlCommandData *manual_control_command, SystemSettingsAirframeTypeOptions * airframe_type, bool normalize_positive);
-static void update_stabilization_desired(ManualControlCommandData * manual_control_command, ManualControlSettingsData * settings, SystemSettingsAirframeTypeOptions * airframe_type);
-static void altitude_hold_desired(ManualControlCommandData * cmd, bool flightModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
+static float get_thrust_source(CarManualControlCommandData *manual_control_command, SystemSettingsAirframeTypeOptions * airframe_type, bool normalize_positive);
+static void update_stabilization_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings, SystemSettingsAirframeTypeOptions * airframe_type);
+static void altitude_hold_desired(CarManualControlCommandData * cmd, bool flightModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
 static void set_flight_mode();
-static void process_transmitter_events(ManualControlCommandData * cmd, ManualControlSettingsData * settings, bool valid);
+static void process_transmitter_events(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings, bool valid);
 static void set_manual_control_error(SystemAlarmsManualControlOptions errorCode);
 static float scaleChannel(int n, int16_t value);
 static bool validInputRange(int n, uint16_t value, uint16_t offset);
@@ -112,7 +114,7 @@ static uint32_t timeDifferenceMs(uint32_t start_time, uint32_t end_time);
 static void applyDeadband(float *value, float deadband);
 static void resetRcvrActivity(struct rcvr_activity_fsm * fsm);
 static bool updateRcvrActivity(struct rcvr_activity_fsm * fsm);
-static void set_loiter_command(ManualControlCommandData *cmd, SystemSettingsAirframeTypeOptions *airframe_type);
+static void set_loiter_command(CarManualControlCommandData *cmd, SystemSettingsAirframeTypeOptions *airframe_type);
 
 // Exposed from manualcontrol to prevent attempts to arm when unsafe
 extern bool ok_to_arm();
@@ -138,12 +140,9 @@ int rssitype_to_channelgroup() {
 //! Initialize the transmitter control mode
 int32_t transmitter_control_initialize()
 {
-	if (ManualControlCommandInitialize() == -1
-			|| FlightStatusInitialize() == -1
-			|| StabilizationDesiredInitialize() == -1
+	if (CarManualControlCommandInitialize() == -1
 			|| ReceiverActivityInitialize() == -1
-			|| LoiterCommandInitialize() == -1
-			|| ManualControlSettingsInitialize() == -1) {
+			|| CarManualControlSettingsInitialize() == -1) {
 		return -1;
 	}
 
@@ -154,7 +153,7 @@ int32_t transmitter_control_initialize()
 	resetRcvrActivity(&activity_fsm);
 
 	// Use callback to update the settings when they change
-	ManualControlSettingsConnectCallbackCtx(UAVObjCbSetFlag, &settings_updated);
+	CarManualControlSettingsConnectCallbackCtx(UAVObjCbSetFlag, &settings_updated);
 
 	settings_updated = true;
 
@@ -163,7 +162,7 @@ int32_t transmitter_control_initialize()
 	return 0;
 }
 
-static float get_thrust_source(ManualControlCommandData *manual_control_command, SystemSettingsAirframeTypeOptions * airframe_type, bool normalize_positive)
+static float get_thrust_source(CarManualControlCommandData *manual_control_command, SystemSettingsAirframeTypeOptions * airframe_type, bool normalize_positive)
 {
 	float const thrust = (*airframe_type == SYSTEMSETTINGS_AIRFRAMETYPE_HELICP) ? manual_control_command->Collective : manual_control_command->Throttle;
 
@@ -185,12 +184,12 @@ int32_t transmitter_control_update()
 {
 	lastSysTime = PIOS_Thread_Systime();
 
-	float scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_NUMELEM];
-	bool validChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_NUMELEM];
+	float scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NUMELEM];
+	bool validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NUMELEM];
 
 	if (settings_updated) {
 		settings_updated = false;
-		ManualControlSettingsGet(&settings);
+		CarManualControlSettingsGet(&settings);
 	}
 
 	/* Update channel activity monitor */
@@ -209,11 +208,11 @@ int32_t transmitter_control_update()
 		lastActivityTime = lastSysTime;
 	}
 
-	if (settings.RssiType != MANUALCONTROLSETTINGS_RSSITYPE_NONE) {
+	if (settings.RssiType != CARMANUALCONTROLSETTINGS_RSSITYPE_NONE) {
 		int32_t value = 0;
 
 		switch (settings.RssiType) {
-		case MANUALCONTROLSETTINGS_RSSITYPE_ADC:
+		case CARMANUALCONTROLSETTINGS_RSSITYPE_ADC:
 #if defined(PIOS_INCLUDE_ADC)
 			if (settings.RssiChannelNumber > 0) {
 				value = PIOS_ADC_GetChannelRaw(settings.RssiChannelNumber - 1);
@@ -222,17 +221,17 @@ int32_t transmitter_control_update()
 			}
 #endif
 			break;
-		case MANUALCONTROLSETTINGS_RSSITYPE_OPENLRS:
+		case CARMANUALCONTROLSETTINGS_RSSITYPE_OPENLRS:
 #if defined(PIOS_INCLUDE_OPENLRS_RCVR)
 			value = PIOS_OpenLRS_RSSI_Get();
 #endif /* PIOS_INCLUDE_OPENLRS_RCVR */
 			break;
-		case MANUALCONTROLSETTINGS_RSSITYPE_FRSKYPWM:
+		case CARMANUALCONTROLSETTINGS_RSSITYPE_FRSKYPWM:
 #if defined(PIOS_INCLUDE_FRSKY_RSSI)
 			value = PIOS_FrSkyRssi_Get();
 #endif /* PIOS_INCLUDE_FRSKY_RSSI */
 			break;
-		case MANUALCONTROLSETTINGS_RSSITYPE_RFM22B:
+		case CARMANUALCONTROLSETTINGS_RSSITYPE_RFM22B:
 #if defined(PIOS_INCLUDE_RFM22B)
 			value = PIOS_RFM22B_RSSI_Get();
 #endif /* PIOS_INCLUDE_RFM22B */
@@ -269,9 +268,18 @@ int32_t transmitter_control_update()
 
 	bool valid_input_detected = true;
 
+	settings.ChannelNumber[0] = 1;
+	settings.ChannelNumber[1] = 2;
+	settings.ChannelNumber[2] = 3;
+	settings.ChannelNumber[3] = 4;
+	settings.ChannelNumber[4] = 5;
+	settings.ChannelNumber[5] = 6;
+	settings.ChannelNumber[6] = 7;
+	settings.ChannelNumber[7] = 8;
+
 	// Read channel values in us
 	for (uint8_t n = 0;
-	     n < MANUALCONTROLSETTINGS_CHANNELGROUPS_NUMELEM && n < MANUALCONTROLCOMMAND_CHANNEL_NUMELEM;
+	     n < CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NUMELEM && n < CARMANUALCONTROLCOMMAND_CHANNEL_NUMELEM;
 	     ++n) {
 
 		if (settings.ChannelGroups[n] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) {
@@ -293,34 +301,37 @@ int32_t transmitter_control_update()
 		}
 	}
 
+	JLinkRTTPrintf(0, "Received PPM signal [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", cmd.Channel[0], cmd.Channel[1],
+		cmd.Channel[2],cmd.Channel[3],cmd.Channel[4],cmd.Channel[5],cmd.Channel[6], cmd.Channel[7]);
+
 	// Check settings, if error raise alarm
-	if (settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
-		settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
-		settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
-		settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
+	if (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
+		settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
+		settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
+		settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
 		// Check all channel mappings are valid
-		cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] == (uint16_t) PIOS_RCVR_INVALID ||
-		cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] == (uint16_t) PIOS_RCVR_INVALID ||
-		cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] == (uint16_t) PIOS_RCVR_INVALID ||
-		cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] == (uint16_t) PIOS_RCVR_INVALID ||
+		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] == (uint16_t) PIOS_RCVR_INVALID ||
+		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] == (uint16_t) PIOS_RCVR_INVALID ||
+		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] == (uint16_t) PIOS_RCVR_INVALID ||
+		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] == (uint16_t) PIOS_RCVR_INVALID ||
 		// Check the driver exists
-		cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] == (uint16_t) PIOS_RCVR_NODRIVER ||
-		cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] == (uint16_t) PIOS_RCVR_NODRIVER ||
-		cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] == (uint16_t) PIOS_RCVR_NODRIVER ||
-		cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] == (uint16_t) PIOS_RCVR_NODRIVER ||
+		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] == (uint16_t) PIOS_RCVR_NODRIVER ||
+		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] == (uint16_t) PIOS_RCVR_NODRIVER ||
+		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] == (uint16_t) PIOS_RCVR_NODRIVER ||
+		cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] == (uint16_t) PIOS_RCVR_NODRIVER ||
 		// Check the FlightModeNumber is valid
-		settings.FlightModeNumber < 1 || settings.FlightModeNumber > MANUALCONTROLSETTINGS_FLIGHTMODEPOSITION_NUMELEM ||
+		settings.FlightModeNumber < 1 || settings.FlightModeNumber > CARMANUALCONTROLSETTINGS_FLIGHTMODEPOSITION_NUMELEM ||
 		// If we've got more than one possible valid FlightMode, we require a configured FlightMode channel
-		((settings.FlightModeNumber > 1) && (settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE)) ||
+		((settings.FlightModeNumber > 1) && (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE)) ||
 		// Whenever FlightMode channel is configured, it needs to be valid regardless of FlightModeNumber settings
-		((settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] < MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) && (
-			cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] == (uint16_t) PIOS_RCVR_INVALID ||
-			cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] == (uint16_t) PIOS_RCVR_NODRIVER ))) {
+		((settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] < CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) && (
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] == (uint16_t) PIOS_RCVR_INVALID ||
+			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] == (uint16_t) PIOS_RCVR_NODRIVER ))) {
 
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_SETTINGS);
 
-		cmd.Connected = MANUALCONTROLCOMMAND_CONNECTED_FALSE;
-		ManualControlCommandSet(&cmd);
+		cmd.Connected = CARMANUALCONTROLCOMMAND_CONNECTED_FALSE;
+		CarManualControlCommandSet(&cmd);
 
 		control_status = STATUS_ERROR;
 
@@ -329,32 +340,32 @@ int32_t transmitter_control_update()
 
 	// the block above validates the input configuration. this simply checks that the range is valid if flight mode is configured.
 	bool flightmode_valid_input = settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE] >= MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
-	    validChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
+	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
 
 	// because arming is optional we must determine if it is needed before checking it is valid
 	bool arming_valid_input = (settings.Arming < MANUALCONTROLSETTINGS_ARMING_SWITCH) ||
-		validChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING];
+		validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING];
 
 	// decide if we have valid manual input or not
-	valid_input_detected &= validChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] &&
-	    validChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] &&
-	    validChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] &&
-	    validChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] &&
+	valid_input_detected &= validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] &&
+	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] &&
+	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] &&
+	    validChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] &&
 	    flightmode_valid_input &&
 	    arming_valid_input;
 
 	// Implement hysteresis loop on connection status
 	if (valid_input_detected && (++connected_count > 10)) {
-		cmd.Connected = MANUALCONTROLCOMMAND_CONNECTED_TRUE;
+		cmd.Connected = CARMANUALCONTROLCOMMAND_CONNECTED_TRUE;
 		connected_count = 0;
 		disconnected_count = 0;
 	} else if (!valid_input_detected && (++disconnected_count > 10)) {
-		cmd.Connected = MANUALCONTROLCOMMAND_CONNECTED_FALSE;
+		cmd.Connected = CARMANUALCONTROLCOMMAND_CONNECTED_FALSE;
 		connected_count = 0;
 		disconnected_count = 0;
 	}
 
-	if (cmd.Connected == MANUALCONTROLCOMMAND_CONNECTED_FALSE) {
+	if (cmd.Connected == CARMANUALCONTROLCOMMAND_CONNECTED_FALSE) {
 		// These values are not used but just put ManualControlCommand in a sane state.  When
 		// Connected is false, then the failsafe submodule will be in control.
 
@@ -382,13 +393,13 @@ int32_t transmitter_control_update()
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_NONE);
 
 		// Scale channels to -1 -> +1 range
-		cmd.Roll           = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL];
-		cmd.Pitch          = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH];
-		cmd.Yaw            = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_YAW];
-		cmd.Throttle       = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE];
-		cmd.ArmSwitch      = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] > 0 ?
-		                     MANUALCONTROLCOMMAND_ARMSWITCH_ARMED : MANUALCONTROLCOMMAND_ARMSWITCH_DISARMED;
-		flight_mode_value  = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
+		cmd.Roll           = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL];
+		cmd.Pitch          = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH];
+		cmd.Yaw            = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW];
+		cmd.Throttle       = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE];
+		cmd.ArmSwitch      = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] > 0 ?
+		                     CARMANUALCONTROLCOMMAND_ARMSWITCH_ARMED : CARMANUALCONTROLCOMMAND_ARMSWITCH_DISARMED;
+		flight_mode_value  = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_FLIGHTMODE];
 
 		// Apply deadband for Roll/Pitch/Yaw stick inputs
 		if (settings.Deadband) {
@@ -397,16 +408,16 @@ int32_t transmitter_control_update()
 			applyDeadband(&cmd.Yaw, settings.Deadband);
 		}
 
-		if(cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] != (uint16_t) PIOS_RCVR_INVALID &&
-		   cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] != (uint16_t) PIOS_RCVR_NODRIVER &&
-		   cmd.Channel[MANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] != (uint16_t) PIOS_RCVR_TIMEOUT) {
-			cmd.Collective = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE];
+		if(cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] != (uint16_t) PIOS_RCVR_INVALID &&
+		   cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] != (uint16_t) PIOS_RCVR_NODRIVER &&
+		   cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] != (uint16_t) PIOS_RCVR_TIMEOUT) {
+			cmd.Collective = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE];
 		}
 
 		// Set Accessory 0
-		if (settings.ChannelGroups[MANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0] !=
-			MANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) {
-			cmd.Accessory[0] = scaledChannel[MANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0];
+		if (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0] !=
+			CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE) {
+			cmd.Accessory[0] = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0];
 		}
 
 		// Set Accessory 1
@@ -427,7 +438,7 @@ int32_t transmitter_control_update()
 	process_transmitter_events(&cmd, &settings, valid_input_detected);
 
 	// Update cmd object
-	ManualControlCommandSet(&cmd);
+	CarManualControlCommandSet(&cmd);
 
 	return 0;
 }
@@ -441,7 +452,7 @@ int32_t transmitter_control_select(bool reset_controller)
 	// Activate the flight mode corresponding to the switch position
 	set_flight_mode();
 
-	ManualControlCommandGet(&cmd);
+	CarManualControlCommandGet(&cmd);
 
 	SystemSettingsAirframeTypeGet(&airframe_type);
 
@@ -507,7 +518,7 @@ uint8_t transmitter_control_get_flight_mode()
 /**
  * Check sticks to determine if they are in the arming position
  */
-static bool arming_position(ManualControlCommandData * cmd, ManualControlSettingsData * settings) {
+static bool arming_position(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings) {
 
 	// If system is not appropriate to arm, do not even attempt
 	if (!ok_to_arm())
@@ -516,26 +527,26 @@ static bool arming_position(ManualControlCommandData * cmd, ManualControlSetting
 	bool lowThrottle = cmd->Throttle <= 0;
 
 	switch(settings->Arming) {
-	case MANUALCONTROLSETTINGS_ARMING_ALWAYSDISARMED:
+	case CARMANUALCONTROLSETTINGS_ARMING_ALWAYSDISARMED:
 		return false;
-	case MANUALCONTROLSETTINGS_ARMING_ROLLLEFTTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_ROLLLEFTTHROTTLE:
 		return lowThrottle && cmd->Roll < -ARMED_THRESHOLD;
-	case MANUALCONTROLSETTINGS_ARMING_ROLLRIGHTTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_ROLLRIGHTTHROTTLE:
 		return lowThrottle && cmd->Roll > ARMED_THRESHOLD;
-	case MANUALCONTROLSETTINGS_ARMING_YAWLEFTTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_YAWLEFTTHROTTLE:
 		return lowThrottle && cmd->Yaw < -ARMED_THRESHOLD;
-	case MANUALCONTROLSETTINGS_ARMING_YAWRIGHTTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_YAWRIGHTTHROTTLE:
 		return lowThrottle && cmd->Yaw > ARMED_THRESHOLD;
-	case MANUALCONTROLSETTINGS_ARMING_CORNERSTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_CORNERSTHROTTLE:
 		return lowThrottle && (
 			(cmd->Yaw > ARMED_THRESHOLD || cmd->Yaw < -ARMED_THRESHOLD) &&
 			(cmd->Roll > ARMED_THRESHOLD || cmd->Roll < -ARMED_THRESHOLD) ) &&
 			(cmd->Pitch > ARMED_THRESHOLD);
 			// Note that pulling pitch stick down corresponds to positive values
-	case MANUALCONTROLSETTINGS_ARMING_SWITCHTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_SWITCHTHROTTLE:
 		if (!lowThrottle) return false;
-	case MANUALCONTROLSETTINGS_ARMING_SWITCH:
-		return cmd->ArmSwitch == MANUALCONTROLCOMMAND_ARMSWITCH_ARMED;
+	case CARMANUALCONTROLSETTINGS_ARMING_SWITCH:
+		return cmd->ArmSwitch == CARMANUALCONTROLCOMMAND_ARMSWITCH_ARMED;
 	default:
 		return false;
 	}
@@ -544,35 +555,35 @@ static bool arming_position(ManualControlCommandData * cmd, ManualControlSetting
 /**
  * Check sticks to determine if they are in the disarmed position
  */
-static bool disarming_position(ManualControlCommandData * cmd, ManualControlSettingsData * settings)
+static bool disarming_position(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings)
 {
 	bool lowThrottle = cmd->Throttle <= 0;
 
 	switch(settings->Arming) {
-	case MANUALCONTROLSETTINGS_ARMING_ALWAYSDISARMED:
+	case CARMANUALCONTROLSETTINGS_ARMING_ALWAYSDISARMED:
 		return true;
-	case MANUALCONTROLSETTINGS_ARMING_ROLLLEFTTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_ROLLLEFTTHROTTLE:
 		return lowThrottle && cmd->Roll > ARMED_THRESHOLD;
-	case MANUALCONTROLSETTINGS_ARMING_ROLLRIGHTTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_ROLLRIGHTTHROTTLE:
 		return lowThrottle && cmd->Roll < -ARMED_THRESHOLD;
-	case MANUALCONTROLSETTINGS_ARMING_YAWLEFTTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_YAWLEFTTHROTTLE:
 		return lowThrottle && cmd->Yaw > ARMED_THRESHOLD;
-	case MANUALCONTROLSETTINGS_ARMING_YAWRIGHTTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_YAWRIGHTTHROTTLE:
 		return lowThrottle && cmd->Yaw < -ARMED_THRESHOLD;
-	case MANUALCONTROLSETTINGS_ARMING_CORNERSTHROTTLE:
+	case CARMANUALCONTROLSETTINGS_ARMING_CORNERSTHROTTLE:
 		return lowThrottle && (
 			(cmd->Yaw > ARMED_THRESHOLD || cmd->Yaw < -ARMED_THRESHOLD) &&
 			(cmd->Roll > ARMED_THRESHOLD || cmd->Roll < -ARMED_THRESHOLD) );
-	case MANUALCONTROLSETTINGS_ARMING_SWITCH:
-	case MANUALCONTROLSETTINGS_ARMING_SWITCHTHROTTLE:
-		return cmd->ArmSwitch != MANUALCONTROLCOMMAND_ARMSWITCH_ARMED;
+	case CARMANUALCONTROLSETTINGS_ARMING_SWITCH:
+	case CARMANUALCONTROLSETTINGS_ARMING_SWITCHTHROTTLE:
+		return cmd->ArmSwitch != CARMANUALCONTROLCOMMAND_ARMSWITCH_ARMED;
 	default:
 		return false;
 	}
 }
 
-static bool disarm_commanded(ManualControlCommandData *cmd,
-		ManualControlSettingsData *settings)
+static bool disarm_commanded(CarManualControlCommandData *cmd,
+		CarManualControlSettingsData *settings)
 {
 	static uint32_t start_time;
 
@@ -646,11 +657,11 @@ static bool check_receiver_timer(uint32_t threshold) {
  * @param[in] scaled The scaled channels, used for checking arming
  * @param[in] valid If the input data is valid (i.e. transmitter is transmitting)
  */
-static void process_transmitter_events(ManualControlCommandData * cmd, ManualControlSettingsData * settings, bool valid)
+static void process_transmitter_events(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings, bool valid)
 {
-	valid &= cmd->Connected == MANUALCONTROLCOMMAND_CONNECTED_TRUE;
+	valid &= cmd->Connected == CARMANUALCONTROLCOMMAND_CONNECTED_TRUE;
 
-	if (!valid || (cmd->Connected != MANUALCONTROLCOMMAND_CONNECTED_TRUE)) {
+	if (!valid || (cmd->Connected != CARMANUALCONTROLCOMMAND_CONNECTED_TRUE)) {
 		/* disarm timeout check-- use least favorable timeout.
 		 * Note that if things were low throttle, and are now
 		 * disconnected, we keep the old timer running.
@@ -717,8 +728,8 @@ static void process_transmitter_events(ManualControlCommandData * cmd, ManualCon
 			reset_receiver_timer();
 		}
 
-		if (settings->Arming == MANUALCONTROLSETTINGS_ARMING_SWITCH ||
-				settings->Arming == MANUALCONTROLSETTINGS_ARMING_SWITCHTHROTTLE) {
+		if (settings->Arming == CARMANUALCONTROLSETTINGS_ARMING_SWITCH ||
+				settings->Arming == CARMANUALCONTROLSETTINGS_ARMING_SWITCHTHROTTLE) {
 			control_status = STATUS_ARM_VALID;
 		} else {
 			control_status = STATUS_ARM_INVALID;
@@ -729,8 +740,8 @@ static void process_transmitter_events(ManualControlCommandData * cmd, ManualCon
 		/* If the arming switch is flipped on, but we don't otherwise
 		 * qualify for arming, let the upper layer know.
 		 */
-		if (settings->Arming == MANUALCONTROLSETTINGS_ARMING_SWITCHTHROTTLE) {
-			if (cmd->ArmSwitch == MANUALCONTROLCOMMAND_ARMSWITCH_ARMED) {
+		if (settings->Arming == CARMANUALCONTROLSETTINGS_ARMING_SWITCHTHROTTLE) {
+			if (cmd->ArmSwitch == CARMANUALCONTROLCOMMAND_ARMSWITCH_ARMED) {
 				control_status = STATUS_INVALID_FOR_DISARMED;
 				return;
 			}
@@ -934,7 +945,7 @@ static inline float scale_stabilization(StabilizationSettingsData *stabSettings,
 }
 
 //! In stabilization mode, set stabilization desired
-static void update_stabilization_desired(ManualControlCommandData * manual_control_command, ManualControlSettingsData * settings, SystemSettingsAirframeTypeOptions * airframe_type)
+static void update_stabilization_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings, SystemSettingsAirframeTypeOptions * airframe_type)
 {
 	StabilizationDesiredData stabilization;
 	StabilizationDesiredGet(&stabilization);
@@ -1073,7 +1084,7 @@ static void update_stabilization_desired(ManualControlCommandData * manual_contr
  * @brief Update the altitude desired to current altitude when
  * enabled and enable altitude mode for stabilization
  */
-static void altitude_hold_desired(ManualControlCommandData * cmd, bool flightModeChanged, SystemSettingsAirframeTypeOptions * airframe_type)
+static void altitude_hold_desired(CarManualControlCommandData * cmd, bool flightModeChanged, SystemSettingsAirframeTypeOptions * airframe_type)
 {
 	if (AltitudeHoldDesiredHandle() == NULL) {
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_ALTITUDEHOLD);
@@ -1151,7 +1162,7 @@ static void altitude_hold_desired(ManualControlCommandData * cmd, bool flightMod
 }
 
 
-static void set_loiter_command(ManualControlCommandData *cmd, SystemSettingsAirframeTypeOptions *airframe_type)
+static void set_loiter_command(CarManualControlCommandData *cmd, SystemSettingsAirframeTypeOptions *airframe_type)
 {
 	LoiterCommandData loiterCommand;
 

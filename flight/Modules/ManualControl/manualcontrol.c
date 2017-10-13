@@ -77,7 +77,7 @@ bool ok_to_arm(void);
 int32_t ManualControlStart()
 {
 	// Watchdog must be registered before starting task
-	PIOS_WDG_RegisterFlag(PIOS_WDG_MANUAL);
+	// PIOS_WDG_RegisterFlag(PIOS_WDG_MANUAL);
 
 	// Start main task
 	taskHandle = PIOS_Thread_Create(manualControlTask, "Control", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);
@@ -92,6 +92,7 @@ int32_t ManualControlStart()
 int32_t ManualControlInitialize()
 {
 	if (failsafe_control_initialize() == -1 \
+		|| FlightStatusInitialize() == -1 \
 		|| transmitter_control_initialize() == -1) {
 	
 		return -1;
@@ -224,13 +225,13 @@ static void manualControlTask(void *parameters)
 					GO_STATE(ARM_STATE_SAFETY);
 				}
 
-				ManualControlSettingsArmTimeOptions arm_enum;
-				ManualControlSettingsArmTimeGet(&arm_enum);
+				CarManualControlSettingsArmTimeOptions arm_enum;
+				CarManualControlSettingsArmTimeGet(&arm_enum);
 
-				arm_time = (arm_enum == MANUALCONTROLSETTINGS_ARMTIME_250) ? 250 :
-					(arm_enum == MANUALCONTROLSETTINGS_ARMTIME_500) ? 500 :
-					(arm_enum == MANUALCONTROLSETTINGS_ARMTIME_1000) ? 1000 :
-					(arm_enum == MANUALCONTROLSETTINGS_ARMTIME_2000) ? 2000 : 1000;
+				arm_time = (arm_enum == CARMANUALCONTROLSETTINGS_ARMTIME_250) ? 250 :
+					(arm_enum == CARMANUALCONTROLSETTINGS_ARMTIME_500) ? 500 :
+					(arm_enum == CARMANUALCONTROLSETTINGS_ARMTIME_1000) ? 1000 :
+					(arm_enum == CARMANUALCONTROLSETTINGS_ARMTIME_2000) ? 2000 : 1000;
 
 				break;
 			case ARM_STATE_ARMING:
@@ -318,7 +319,7 @@ static void manualControlTask(void *parameters)
 
 		// Wait until next update
 		PIOS_RCVR_WaitActivity(UPDATE_PERIOD_MS);
-		PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
+		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 	}
 }
 
@@ -335,9 +336,9 @@ static void manualControlTask(void *parameters)
  */
 static FlightStatusControlSourceOptions control_source_select()
 {
-	ManualControlCommandData cmd;
-	ManualControlCommandGet(&cmd);
-	if (cmd.Connected != MANUALCONTROLCOMMAND_CONNECTED_TRUE) {
+	CarManualControlCommandData cmd;
+	CarManualControlCommandGet(&cmd);
+	if (cmd.Connected != CARMANUALCONTROLCOMMAND_CONNECTED_TRUE) {
 		return FLIGHTSTATUS_CONTROLSOURCE_FAILSAFE;
 	} 
 	else {

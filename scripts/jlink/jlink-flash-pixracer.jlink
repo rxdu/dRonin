@@ -1,0 +1,4 @@
+h
+loadfile build/fw_pixracer/fw_pixracer.bin 0x08020000
+r
+q

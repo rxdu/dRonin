@@ -1171,3 +1171,11 @@ $(DOCS_BUILD_TARGETS): docs_%: $(BUILD_DIR) uavobjects
 $(DOCS_CLEAN_TARGETS): docs_%_clean:
 	$(V0) @echo " CLEAN      $(call toprel,$(BUILD_DIR)/docs/$*)"
 	$(V1) [ ! -d "$(BUILD_DIR)/docs/$*" ] || $(RM) -rf "$(BUILD_DIR)/docs/$*"
+
+##############################
+#
+# Debug Scripts 
+# (included here for convenience)
+#
+##############################
+include $(ROOT_DIR)/make/debug/pixracer-debug.mk
