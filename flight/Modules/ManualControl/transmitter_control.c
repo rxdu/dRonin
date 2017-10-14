@@ -141,7 +141,7 @@ int rssitype_to_channelgroup() {
 int32_t transmitter_control_initialize()
 {
 	if (CarManualControlCommandInitialize() == -1
-			|| CarActuatorDesiredInitialize() == -1
+			// || CarActuatorDesiredInitialize() == -1
 			|| CarManualControlSettingsInitialize() == -1
 			|| DrivingStatusInitialize() == -1 
 			|| ReceiverActivityInitialize() == -1) {
@@ -383,7 +383,7 @@ int32_t transmitter_control_update()
 
 	} else if (valid_input_detected) {
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_NONE);
-		JLinkWriteString(0, "SYSTEMALARMS_MANUALCONTROL_NONE");
+		//JLinkWriteString(0, "SYSTEMALARMS_MANUALCONTROL_NONE");
 
 		// Scale channels to -1 -> +1 range
 		cmd.Roll           = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL];

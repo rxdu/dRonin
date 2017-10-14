@@ -2,16 +2,16 @@
 <xml>
 	<object name="CarActuatorSettings" singleinstance="true" settings="true">
 		<description>Settings for the @ref ActuatorModule that controls the channel assignments for the mixer based on AircraftType</description>
-		<field name="TimerUpdateFreq" units="Hz" type="uint16" elements="6" defaultvalue="50">
+		<field name="TimerUpdateFreq" units="Hz" type="uint16" elements="2" defaultvalue="0">
 			<description>The frequency of the PWM signal output to the actuator. 0 specifies synchronous PWM.</description>
 		</field>
-		<field name="ChannelMax" units="us" type="uint16" elements="8" defaultvalue="0">
+		<field name="ChannelMax" units="us" type="uint16" elements="2" defaultvalue="0">
 			<description>Maximum output pulse length. Actuator commands will be scaled [-1,1] &gt; [ChannelMin,ChannelMax].</description>
 		</field>
-		<field name="ChannelNeutral" units="us" type="uint16" elements="8" defaultvalue="0">
+		<field name="ChannelNeutral" units="us" type="uint16" elements="2" defaultvalue="0">
 			<description>Neutral output pulse length. For motors, should be set to the minimum pulse that causes the motor to start and spin reliably.</description>
 		</field>
-		<field name="ChannelMin" units="us" type="uint16" elements="8" defaultvalue="0">
+		<field name="ChannelMin" units="us" type="uint16" elements="2" defaultvalue="0">
 			<description>Minimum output pulse length. Actuator commands will be scaled from [-1,1] to [ChannelMin,ChannelMax].</description>
 		</field>
 		<field name="MotorsSpinWhileArmed" units="" type="enum" elements="1" options="FALSE,TRUE" defaultvalue="FALSE">

@@ -15,6 +15,9 @@
         "type_traits": "c",
         "system_error": "c",
         "rope": "c",
-        "caractuatordesired.h": "c"
+        "caractuatordesired.h": "c",
+        "carmanualcontrolcommand.h": "c",
+        "caractuatorcommand.h": "c",
+        "drivingstatus.h": "c"
     }
 }
