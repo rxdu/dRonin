@@ -19,6 +19,8 @@
         "carmanualcontrolcommand.h": "c",
         "caractuatorcommand.h": "c",
         "drivingstatus.h": "c",
-        "thread": "c"
+        "thread": "c",
+        "random": "c",
+        "future": "c"
     }
 }

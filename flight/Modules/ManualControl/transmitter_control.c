@@ -262,6 +262,15 @@ int32_t transmitter_control_update()
 
 	for(uint8_t n = 0; n < CARMANUALCONTROLCOMMAND_CHANNEL_NUMELEM; ++n)
 		settings.ChannelNumber[n] = n + 1;
+	
+	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] = 1;
+	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] = 2;
+	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] = 3;
+	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] = 4;
+	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] = 6;	
+	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] = 7;
+	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0] = 8;
+	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] = 5;
 
 	// Read channel values in us
 	for (volatile uint8_t n = 0;
@@ -290,6 +299,8 @@ int32_t transmitter_control_update()
 
 	JLinkRTTPrintf(0, "Received PPM signal [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", cmd.Channel[0], cmd.Channel[1],
 		cmd.Channel[2],cmd.Channel[3],cmd.Channel[4],cmd.Channel[5],cmd.Channel[6], cmd.Channel[7]);
+	// JLinkRTTPrintf(0, "Scaled PPM signal [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", scaledChannel[0], scaledChannel[1],
+	// 	scaledChannel[2],scaledChannel[3],scaledChannel[4],scaledChannel[5],scaledChannel[6], scaledChannel[7]);
 
 	// Check settings, if error raise alarm
 	if (settings.ChannelGroups[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] >= CARMANUALCONTROLSETTINGS_CHANNELGROUPS_NONE ||
@@ -391,7 +402,8 @@ int32_t transmitter_control_update()
 		cmd.Yaw            = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW];
 		cmd.Throttle       = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE];
 		cmd.ArmSwitch      = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] > 0 ?
-		                     CARMANUALCONTROLCOMMAND_ARMSWITCH_ARMED : CARMANUALCONTROLCOMMAND_ARMSWITCH_DISARMED;
+							 CARMANUALCONTROLCOMMAND_ARMSWITCH_ARMED : CARMANUALCONTROLCOMMAND_ARMSWITCH_DISARMED;
+
 		driving_mode_value  = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE];
 
 		// Apply deadband for Roll/Pitch/Yaw stick inputs
@@ -894,7 +906,10 @@ static void update_actuator_desired(CarManualControlCommandData * cmd)
 	actuator.Roll = cmd->Roll;
 	actuator.Pitch = cmd->Pitch;
 	actuator.Yaw = cmd->Yaw;
-	actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
+	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
+	actuator.Steering = cmd->Roll;
+	actuator.Throttle = cmd->Pitch;
+
 	CarActuatorDesiredSet(&actuator);
 }
 
