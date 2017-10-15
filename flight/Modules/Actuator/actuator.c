@@ -68,10 +68,12 @@
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGHEST
 #define FAILSAFE_TIMEOUT_MS 100
 
+#define MIXER_SCALE 128
+
 #define MAX_MIX_ACTUATORS 2
 
 #ifndef MAX_MIX_ACTUATORS
-#define MAX_MIX_ACTUATORS ACTUATORCOMMAND_CHANNEL_NUMELEM
+#define MAX_MIX_ACTUATORS CARACTUATORCOMMAND_CHANNEL_NUMELEM
 #endif
 
 DONT_BUILD_IF(CARACTUATORSETTINGS_TIMERUPDATEFREQ_NUMELEM > PIOS_SERVO_MAX_BANKS, TooManyServoBanks);
@@ -93,12 +95,24 @@ static volatile bool mixer_settings_updated = true;
 /* These are various settings objects used throughout the actuator code */
 static CarActuatorSettingsData actuatorSettings;
 
+// The actual mixer settings data, pulled at the top of the actuator thread
+static CarMixerSettingsData mixerSettings;
+static CarMixerSettingsMixer1TypeOptions types_mixer[MAX_MIX_ACTUATORS];
+/* In the mixer, a row consists of values for one output actuator.
+ * A column consists of values for scaling one axis's desired command.
+ */
+static float motor_mixer[MAX_MIX_ACTUATORS * CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM];
+static CarMixerSettingsCurve2SourceOptions curve2_src;
+static float curve1[CARMIXERSETTINGS_THROTTLECURVE1_NUMELEM];
+static float curve2[CARMIXERSETTINGS_THROTTLECURVE2_NUMELEM];
+
 // Private functions
 static void actuator_task(void* parameters);
 
 static float scale_channel(float value, int idx);
 static void set_failsafe();
 
+static CarMixerSettingsMixer1TypeOptions get_mixer_type(int idx);
 static float throt_curve(const float input, const float *curve,
 		uint8_t num_points);
 static float collective_curve(const float input, const float *curve,
@@ -134,6 +148,12 @@ int32_t ActuatorInitialize()
 	}
 	CarActuatorSettingsConnectCallbackCtx(UAVObjCbSetFlag, &actuator_settings_updated);
 
+	// Register for notification of changes to MixerSettings
+	if (CarMixerSettingsInitialize()  == -1) {
+		return -1;
+	}
+	CarMixerSettingsConnectCallbackCtx(UAVObjCbSetFlag, &mixer_settings_updated);
+
 	// Listen for ActuatorDesired updates (Primary input to this module)
 	if (CarActuatorDesiredInitialize()  == -1) {
 		return -1;
@@ -151,6 +171,121 @@ int32_t ActuatorInitialize()
 }
 
 MODULE_HIPRI_INITCALL(ActuatorInitialize, ActuatorStart);
+
+
+static float get_curve2_source(CarActuatorDesiredData *desired, CarMixerSettingsCurve2SourceOptions source)
+{
+	float tmp;
+
+	switch (source) {
+	case CARMIXERSETTINGS_CURVE2SOURCE_THROTTLE:
+		return desired->Throttle;
+		break;
+	case CARMIXERSETTINGS_CURVE2SOURCE_ROLL:
+		return desired->Roll;
+		break;
+	case CARMIXERSETTINGS_CURVE2SOURCE_PITCH:
+		return desired->Pitch;
+		break;
+	case CARMIXERSETTINGS_CURVE2SOURCE_YAW:
+		return desired->Yaw;
+		break;
+	case CARMIXERSETTINGS_CURVE2SOURCE_COLLECTIVE:
+		CarManualControlCommandCollectiveGet(&tmp);
+		return tmp;
+		break;
+	case CARMIXERSETTINGS_CURVE2SOURCE_ACCESSORY0:
+	case CARMIXERSETTINGS_CURVE2SOURCE_ACCESSORY1:
+	case CARMIXERSETTINGS_CURVE2SOURCE_ACCESSORY2:
+		(void) 0;
+
+		int idx = source - CARMIXERSETTINGS_CURVE2SOURCE_ACCESSORY0;
+
+		if (idx < 0) {
+			return 0;
+		}
+
+		if (idx >= CARMANUALCONTROLCOMMAND_ACCESSORY_NUMELEM) {
+			return 0;
+		}
+
+		float accessories[CARMANUALCONTROLCOMMAND_ACCESSORY_NUMELEM];
+
+		CarManualControlCommandAccessoryGet(accessories);
+
+		return accessories[idx];
+		break;
+	}
+
+	/* Can't get here */
+	return 0;
+}
+
+static void compute_one_mixer(int mixnum,
+		int16_t (*vals)[CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM],
+		CarMixerSettingsMixer1TypeOptions type)
+{
+	types_mixer[mixnum] = type;
+
+	mixnum *= CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM;
+
+	if ((type != CARMIXERSETTINGS_MIXER1TYPE_SERVO) &&
+			(type != CARMIXERSETTINGS_MIXER1TYPE_MOTOR)) {
+		for (int i = 0; i < CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM; i++) {
+			// Ensure unused types are zero-filled
+			motor_mixer[mixnum+i] = 0;
+		}
+	} else {
+		for (int i = 0; i < CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM; i++) {
+			motor_mixer[mixnum+i] = (*vals)[i] * (1.0f / MIXER_SCALE);
+		}
+	}
+}
+
+/* Here be dragons */
+#define compute_one_token_paste(b) compute_one_mixer(b-1, &mixerSettings.Mixer ## b ## Vector, mixerSettings.Mixer ## b ## Type)
+
+static void compute_mixer()
+{
+	CarMixerSettingsData mixerSettings;
+
+	CarMixerSettingsGet(&mixerSettings);
+
+#if MAX_MIX_ACTUATORS > 0
+	compute_one_token_paste(1);
+#endif
+#if MAX_MIX_ACTUATORS > 1
+	compute_one_token_paste(2);
+#endif
+#if MAX_MIX_ACTUATORS > 2
+	compute_one_token_paste(3);
+#endif
+#if MAX_MIX_ACTUATORS > 3
+	compute_one_token_paste(4);
+#endif
+#if MAX_MIX_ACTUATORS > 4
+	compute_one_token_paste(5);
+#endif
+#if MAX_MIX_ACTUATORS > 5
+	compute_one_token_paste(6);
+#endif
+}
+
+static void fill_desired_vector(
+		CarActuatorDesiredData *desired,
+		float val1, float val2,
+		float (*cmd_vector)[CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM])
+{
+	(*cmd_vector)[CARMIXERSETTINGS_MIXER1VECTOR_THROTTLECURVE1] = val1;
+	(*cmd_vector)[CARMIXERSETTINGS_MIXER1VECTOR_THROTTLECURVE2] = val2;
+	(*cmd_vector)[CARMIXERSETTINGS_MIXER1VECTOR_ROLL] = desired->Roll;
+	(*cmd_vector)[CARMIXERSETTINGS_MIXER1VECTOR_PITCH] = desired->Pitch;
+	(*cmd_vector)[CARMIXERSETTINGS_MIXER1VECTOR_YAW] = desired->Yaw;
+
+	/* Accessory0..Accessory2 are filled in when ManualControl changes
+	 * in normalize_input_data
+	 */
+}
 
 static void post_process_scale_and_commit(float *motor_vect,
 		float *desired_vect, float dT,
@@ -182,7 +317,7 @@ static void post_process_scale_and_commit(float *motor_vect,
 	 */
 	float maxpoweradd_softlimit = MAX(
 			2 * actuatorSettings.LowPowerStabilizationMaxPowerAdd,
-			desired_vect[MIXERSETTINGS_MIXER1VECTOR_THROTTLECURVE1])
+			desired_vect[CARMIXERSETTINGS_MIXER1VECTOR_THROTTLECURVE1])
 		* hangtime_leakybucket_timeconstant;
 
 	/* If we're under the limit, add this tick's hangtime power allotment */
@@ -209,18 +344,18 @@ static void post_process_scale_and_commit(float *motor_vect,
 	float maxpoweradd = (*maxpoweradd_bucket) / hangtime_leakybucket_timeconstant;
 
 	for (int ct = 0; ct < MAX_MIX_ACTUATORS; ct++) {
-		switch (types_mixer[ct]) {
-			case MIXERSETTINGS_MIXER1TYPE_DISABLED:
+		switch (get_mixer_type(ct)) {
+			case CARMIXERSETTINGS_MIXER1TYPE_DISABLED:
 				// Set to minimum if disabled.
 				// This is not the same as saying
 				// PWM pulse = 0 us
 				motor_vect[ct] = -1;
 				break;
 
-			case MIXERSETTINGS_MIXER1TYPE_SERVO:
+			case CARMIXERSETTINGS_MIXER1TYPE_SERVO:
 				break;
 
-			case MIXERSETTINGS_MIXER1TYPE_MOTOR:
+			case CARMIXERSETTINGS_MIXER1TYPE_MOTOR:
 				min_chan = fminf(min_chan, motor_vect[ct]);
 				max_chan = fmaxf(max_chan, motor_vect[ct]);
 
@@ -230,7 +365,7 @@ static void post_process_scale_and_commit(float *motor_vect,
 
 				num_motors++;
 				break;
-			case MIXERSETTINGS_MIXER1TYPE_CAMERAPITCH:
+			case CARMIXERSETTINGS_MIXER1TYPE_CAMERAPITCH:
 				if (CameraDesiredHandle()) {
 					CameraDesiredPitchGet(
 							&motor_vect[ct]);
@@ -238,7 +373,7 @@ static void post_process_scale_and_commit(float *motor_vect,
 					motor_vect[ct] = -1;
 				}
 				break;
-			case MIXERSETTINGS_MIXER1TYPE_CAMERAROLL:
+			case CARMIXERSETTINGS_MIXER1TYPE_CAMERAROLL:
 				if (CameraDesiredHandle()) {
 					CameraDesiredRollGet(
 							&motor_vect[ct]);
@@ -246,7 +381,7 @@ static void post_process_scale_and_commit(float *motor_vect,
 					motor_vect[ct] = -1;
 				}
 				break;
-			case MIXERSETTINGS_MIXER1TYPE_CAMERAYAW:
+			case CARMIXERSETTINGS_MIXER1TYPE_CAMERAYAW:
 				if (CameraDesiredHandle()) {
 					CameraDesiredRollGet(
 							&motor_vect[ct]);
@@ -310,7 +445,7 @@ static void post_process_scale_and_commit(float *motor_vect,
 
 	for (int ct = 0; ct < MAX_MIX_ACTUATORS; ct++) {
 		// Motors have additional protection for when to be on
-		if (types_mixer[ct] == MIXERSETTINGS_MIXER1TYPE_MOTOR) {
+		if (get_mixer_type(ct) == CARMIXERSETTINGS_MIXER1TYPE_MOTOR) {
 			if (!armed) {
 				motor_vect[ct] = -1;  //force min throttle
 			} else if (!stabilize_now) {
@@ -337,18 +472,18 @@ static void post_process_scale_and_commit(float *motor_vect,
 	// Store update time
 	command.UpdateTime = 1000.0f*dT;
 
-	ActuatorCommandMaxUpdateTimeGet(&command.MaxUpdateTime);
+	CarActuatorCommandMaxUpdateTimeGet(&command.MaxUpdateTime);
 
 	if (command.UpdateTime > command.MaxUpdateTime)
 		command.MaxUpdateTime = 1000.0f*dT;
 
 	// Update output object
-	if (!ActuatorCommandReadOnly()) {
-		ActuatorCommandSet(&command);
+	if (!CarActuatorCommandReadOnly()) {
+		CarActuatorCommandSet(&command);
 	} else {
 		// it's read only during servo configuration--
 		// so GCS takes precedence.
-		ActuatorCommandGet(&command);
+		CarActuatorCommandGet(&command);
 	}
 
 	for (int n = 0; n < MAX_MIX_ACTUATORS; ++n) {
@@ -359,7 +494,7 @@ static void post_process_scale_and_commit(float *motor_vect,
 }
 
 static void normalize_input_data(uint32_t this_systime,
-		float (*desired_vect)[MIXERSETTINGS_MIXER1VECTOR_NUMELEM],
+		float (*desired_vect)[CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM],
 		bool *armed, bool *spin_while_armed, bool *stabilize_now)
 {
 	static float manual_throt = -1;
@@ -381,13 +516,13 @@ static void normalize_input_data(uint32_t this_systime,
 		CarManualControlCommandThrottleGet(&manual_throt);
 		manual_control_cmd_updated = false;
 		CarManualControlCommandAccessoryGet(
-			&(*desired_vect)[MIXERSETTINGS_MIXER1VECTOR_ACCESSORY0]);
+			&(*desired_vect)[CARMIXERSETTINGS_MIXER1VECTOR_ACCESSORY0]);
 	}
 
-	*armed = drivingStatus.Armed == FLIGHTSTATUS_ARMED_ARMED;
-	*spin_while_armed = actuatorSettings.MotorsSpinWhileArmed == ACTUATORSETTINGS_MOTORSSPINWHILEARMED_TRUE;
+	*armed = drivingStatus.Armed == DRIVINGSTATUS_ARMED_ARMED;
+	*spin_while_armed = actuatorSettings.MotorsSpinWhileArmed == CARACTUATORSETTINGS_MOTORSSPINWHILEARMED_TRUE;
 
-	throttle_val = desired.Thrust;
+	throttle_val = desired.Throttle;
 
 	if (!*armed) {
 		throttle_val = -1;
@@ -396,12 +531,12 @@ static void normalize_input_data(uint32_t this_systime,
 	*stabilize_now = throttle_val > 0.0f;
 
 	float val1 = throt_curve(throttle_val, curve1,
-			MIXERSETTINGS_THROTTLECURVE1_NUMELEM);
+			CARMIXERSETTINGS_THROTTLECURVE1_NUMELEM);
 
 	//The source for the secondary curve is selectable
 	float val2 = collective_curve(
 			get_curve2_source(&desired, curve2_src),
-			curve2, MIXERSETTINGS_THROTTLECURVE2_NUMELEM);
+			curve2, CARMIXERSETTINGS_THROTTLECURVE2_NUMELEM);
 
 	fill_desired_vector(&desired, val1, val2, desired_vect);
 }
@@ -437,7 +572,7 @@ static void actuator_task(void* parameters)
 
 	/* This is out here because not everything may change each time */
 	uint32_t last_systime = PIOS_Thread_Systime();
-	float desired_vect[MIXERSETTINGS_MIXER1VECTOR_NUMELEM] = { 0 };
+	float desired_vect[CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM] = { 0 };
 	float dT = 0.0f;
 	
 	float maxpoweradd_bucket = 0.0f;
@@ -463,9 +598,9 @@ static void actuator_task(void* parameters)
 			compute_mixer();
 			// XXX compute_inverse_mixer();
 
-			MixerSettingsThrottleCurve1Get(curve1);
-			MixerSettingsThrottleCurve2Get(curve2);
-			MixerSettingsCurve2SourceGet(&curve2_src);
+			CarMixerSettingsThrottleCurve1Get(curve1);
+			CarMixerSettingsThrottleCurve2Get(curve2);
+			CarMixerSettingsCurve2SourceGet(&curve2_src);
 		}
 
 		PIOS_WDG_UpdateFlag(PIOS_WDG_ACTUATOR);
@@ -544,7 +679,7 @@ static void actuator_task(void* parameters)
 		 * desired x 1 column vector. */
 		matrix_mul_check(motor_mixer, desired_vect, motor_vect,
 				MAX_MIX_ACTUATORS,
-				MIXERSETTINGS_MIXER1VECTOR_NUMELEM,
+				CARMIXERSETTINGS_MIXER1VECTOR_NUMELEM,
 				1);
 
 		/* Perform clipping adjustments on the outputs, along with
@@ -621,20 +756,52 @@ static float scale_channel(float value, int idx)
 	return valueScaled;
 }
 
+static CarMixerSettingsMixer1TypeOptions get_mixer_type(int idx)
+{
+	switch (idx) {
+	case 0:
+		return mixerSettings.Mixer1Type;
+		break;
+	case 1:
+		return mixerSettings.Mixer2Type;
+		break;
+	case 2:
+		return mixerSettings.Mixer3Type;
+		break;
+	case 3:
+		return mixerSettings.Mixer4Type;
+		break;
+	case 4:
+		return mixerSettings.Mixer5Type;
+		break;
+	case 5:
+		return mixerSettings.Mixer6Type;
+		break;
+	default:
+		// We can never get here unless there are mixer channels not handled in the above. Fail out.
+		PIOS_Assert(0);
+	}
+
+	/* Can't get here. Just make compiler happy */
+	return mixerSettings.Mixer1Type;
+}
+
 static float channel_failsafe_value(int idx)
 {
-	switch (types_mixer[idx]) {
-	case MIXERSETTINGS_MIXER1TYPE_MOTOR:
+	switch (get_mixer_type(idx)) {
+	case CARMIXERSETTINGS_MIXER1TYPE_MOTOR:
 		return actuatorSettings.ChannelMin[idx];
-	case MIXERSETTINGS_MIXER1TYPE_SERVO:
+	case CARMIXERSETTINGS_MIXER1TYPE_SERVO:
 		return actuatorSettings.ChannelNeutral[idx];
-	case MIXERSETTINGS_MIXER1TYPE_DISABLED:
+	case CARMIXERSETTINGS_MIXER1TYPE_DISABLED:
 		return -1;
 	default:
-		/* Other channel types-- camera.  Center them. */
+		// TODO: is this actually right/safe?
 		return 0;
 	}
 
+	/* Can't get here. */
+	return -1;
 }
 
 /**
@@ -642,7 +809,7 @@ static float channel_failsafe_value(int idx)
  */
 static void set_failsafe()
 {
-	float Channel[ACTUATORCOMMAND_CHANNEL_NUMELEM] = {0};
+	float Channel[CARACTUATORCOMMAND_CHANNEL_NUMELEM] = {0};
 
 	// Set alarm
 	AlarmsSet(SYSTEMALARMS_ALARM_ACTUATOR, SYSTEMALARMS_ALARM_CRITICAL);
@@ -659,7 +826,7 @@ static void set_failsafe()
 	PIOS_Servo_Update();
 
 	// Update output object's parts that we changed
-	ActuatorCommandChannelSet(Channel);
+	CarActuatorCommandChannelSet(Channel);
 }
 
 /**
