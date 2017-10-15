@@ -260,17 +260,17 @@ int32_t transmitter_control_update()
 
 	volatile bool valid_input_detected = true;
 
-	for(uint8_t n = 0; n < CARMANUALCONTROLCOMMAND_CHANNEL_NUMELEM; ++n)
-		settings.ChannelNumber[n] = n + 1;
+	// for(uint8_t n = 0; n < CARMANUALCONTROLCOMMAND_CHANNEL_NUMELEM; ++n)
+	// 	settings.ChannelNumber[n] = n + 1;
 	
-	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] = 1;
-	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] = 2;
-	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] = 3;
-	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] = 4;
-	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] = 6;	
-	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] = 7;
-	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0] = 8;
-	// settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] = 5;
+	settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE] = CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE + 1;
+	settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL] = CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL + 1;
+	settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH] = CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH + 1;
+	settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW] = CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW + 1;
+	settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] = CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE + 1;	
+	settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE] = CARMANUALCONTROLSETTINGS_CHANNELGROUPS_COLLECTIVE + 1;
+	settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0] = CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ACCESSORY0 + 1;
+	settings.ChannelNumber[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] = CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING + 1;
 
 	// Read channel values in us
 	for (volatile uint8_t n = 0;
@@ -297,8 +297,15 @@ int32_t transmitter_control_update()
 		}
 	}
 
-	JLinkRTTPrintf(0, "Received PPM signal [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", cmd.Channel[0], cmd.Channel[1],
-		cmd.Channel[2],cmd.Channel[3],cmd.Channel[4],cmd.Channel[5],cmd.Channel[6], cmd.Channel[7]);
+	JLinkRTTPrintf(0, "Received PPM signal [THR]-[ROL]-[PIT]-[YAW]-[MOD]-[ARM]: %ld, %ld, %ld, %ld, %ld, %ld\n", 
+	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE], 
+	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL],
+	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH],
+	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW],
+	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE],
+	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING]);
+	// JLinkRTTPrintf(0, "Received PPM signal [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", cmd.Channel[0], cmd.Channel[1],
+	// 	cmd.Channel[2],cmd.Channel[3],cmd.Channel[4],cmd.Channel[5],cmd.Channel[6], cmd.Channel[7]);
 	// JLinkRTTPrintf(0, "Scaled PPM signal [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", scaledChannel[0], scaledChannel[1],
 	// 	scaledChannel[2],scaledChannel[3],scaledChannel[4],scaledChannel[5],scaledChannel[6], scaledChannel[7]);
 
@@ -981,6 +988,18 @@ static void update_navigation_desired(CarManualControlCommandData * manual_contr
 	navigation.ReprojectionMode = reprojection;
 
 	NavigationDesiredSet(&navigation);
+
+	// TODO : FOR TEST ONLY
+	CarActuatorDesiredData actuator;
+	CarActuatorDesiredGet(&actuator);
+	actuator.Roll = manual_control_command->Roll;
+	actuator.Pitch = manual_control_command->Pitch;
+	actuator.Yaw = manual_control_command->Yaw;
+	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
+	actuator.Steering = 0.5;
+	actuator.Throttle = -1;
+
+	CarActuatorDesiredSet(&actuator);
 }
 
 /**

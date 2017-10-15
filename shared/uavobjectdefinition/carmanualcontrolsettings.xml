@@ -9,10 +9,10 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
+				<elementname>Arming</elementname>
 				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Arming</elementname>
 			</elementnames>
 			<!-- ReceiverActivity inherits these.
 			     It would be nice to have commonality with
@@ -65,10 +65,10 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
+				<elementname>Arming</elementname>
 				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Arming</elementname>
 			</elementnames>
 		</field>
 		<field name="ChannelMin" units="us" type="int16" defaultvalue="1000">
@@ -78,10 +78,10 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
+				<elementname>Arming</elementname>
 				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Arming</elementname>
 			</elementnames>
 		</field>
 		<field name="ChannelNeutral" units="us" type="int16" defaultvalue="1500">
@@ -91,10 +91,10 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
+				<elementname>Arming</elementname>
 				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Arming</elementname>
 			</elementnames>
 		</field>
 		<field name="ChannelMax" units="us" type="int16" defaultvalue="2000">
@@ -104,16 +104,16 @@
 				<elementname>Roll</elementname>
 				<elementname>Pitch</elementname>
 				<elementname>Yaw</elementname>
+				<elementname>Arming</elementname>
 				<elementname>DrivingMode</elementname>
 				<elementname>Collective</elementname>
 				<elementname>Accessory0</elementname>
-				<elementname>Arming</elementname>
 			</elementnames>
 		</field>
 		<field name="Deadband" units="%" type="float" elements="1" defaultvalue="0" limits="%BE:0:0.1">
 			<description>Deadband around neutral value</description>
 		</field>
-		<field name="Arming" units="" type="enum" elements="1" defaultvalue="Always Disarmed">
+		<field name="Arming" units="" type="enum" elements="1" defaultvalue="Switch">
 			<description>Combination to arm</description>
 			<options>
 				<option>Always Disarmed</option>
@@ -143,7 +143,7 @@
 		<field name="DrivingModeNumber" units="" type="uint8" elements="1" defaultvalue="3">
 			<description>Number of driving modes</description>
 		</field>
-		<field name="DrivingModePosition" units="" type="enum" elements="3" parent="SharedDefs.DrivingMode" defaultvalue="Manual,Navigation1,Manual">
+		<field name="DrivingModePosition" units="" type="enum" elements="3" parent="SharedDefs.DrivingMode" defaultvalue="Manual,Manual,Manual">
 			<description>Driving mode per position</description>
 		</field>
 		<field name="ArmedTimeout" units="ms" type="uint16" elements="1" defaultvalue="30000">

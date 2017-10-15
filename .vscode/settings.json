@@ -21,6 +21,7 @@
         "drivingstatus.h": "c",
         "thread": "c",
         "random": "c",
-        "future": "c"
+        "future": "c",
+        "array": "c"
     }
 }
