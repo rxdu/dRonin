@@ -43,7 +43,7 @@ MODULES += RTT
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl
-MODULES += UAVCAN
+#MODULES += UAVCAN
 #MODULES += Stabilization
 #MODULES += FirmwareIAP
 #MODULES += Telemetry
@@ -95,7 +95,7 @@ MAVLINKINC = $(FLIGHTLIB)/mavlink/v1.0/common
 
 # optional component libraries
 include $(APPLIBDIR)/ChibiOS/library.mk
-#include $(PIOS)/../Modules/UAVCAN/libuavcan_pios.mk
+include $(FLIGHT)/Modules/UAVCAN/libuavcan_pios.mk
 
 # List C source files here. (C dependencies are automatically generated.)
 # use file-extension c for "c-only"-files
@@ -299,6 +299,7 @@ CFLAGS += -mapcs-frame
 CFLAGS += -fomit-frame-pointer
 CFLAGS += -ffunction-sections -fdata-sections
 CFLAGS += -Wdouble-promotion
+CFLAGS += --specs=nosys.specs --specs=nano.specs
 
 CFLAGS += -Wall
 CFLAGS += -Werror
@@ -331,6 +332,7 @@ LDFLAGS += $(patsubst %,-l%,$(EXTRA_LIBS))
 LDFLAGS += -lc_nano -lgcc -lm
 LDFLAGS += -Wl,--warn-common
 LDFLAGS += -Wl,--fatal-warnings
+#LDFLAGS += -ffunction-sections -fdata-sections -fno-builtin -fno-rtti -fno-exceptions -fno-unwind-tables
 
 #Linker scripts
 LDFLAGS += -T memory.ld $(addprefix -T,$(LINKER_SCRIPTS_APP))

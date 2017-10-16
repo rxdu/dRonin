@@ -6,19 +6,29 @@
 # Directory containing this makefile
 #
 PIOS_UAVCAN_MOD	:=	$(dir $(lastword $(MAKEFILE_LIST)))
+
 LIBUAVCAN_DIR := $(PIOS_UAVCAN_MOD)/libuavcan
+PIOS_DRIVER_DIR := $(PIOS_UAVCAN_MOD)pios_driver
 
 #
 # Library sources
 #
 LIBUAVCAN_SRC := $(shell find $(LIBUAVCAN_DIR)/src -type f -name '*.cpp')
-PIOSUAVCAN_SRC := $(shell find $(PIOS_UAVCAN_MOD)/pios_driver/ -type f -name "*.cpp")
+PIOSUAVCAN_SRC := $(shell find $(PIOS_DRIVER_DIR) -type f -name '*.cpp')
 
-LIBUAVCAN_INC := $(LIBUAVCAN_DIR)/include
-PIOSUAVCAN_INC := $(LIBUAVCAN_DIR)
+#LIBUAVCAN_INC := $(LIBUAVCAN_DIR)/include
+#PIOSUAVCAN_INC := $(PIOS_UAVCAN_MOD)/pios_driver
 
-CPPSRC  += $(LIBUAVCAN_SRC) $(PIOSUAVCAN_SRC)
-UINCDIR += $(LIBUAVCAN_INC) $(PIOSUAVCAN_INC)
+CPPSRC  += $(LIBUAVCAN_SRC) 
+＃CPPSRC  += $(PIOSUAVCAN_SRC)
+
+EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include
+EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include/dsdlc_generated
+EXTRAINCDIRS += $(PIOS_UAVCAN_MOD)／pios_driver
+
+CPPFLAGS += -DUAVCAN_CPP_VERSION=UAVCAN_CPP11 -std=c++11 
+#-fno-threadsafe-statics
+
 
 #
 # DSDL compiler executable

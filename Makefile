@@ -603,6 +603,7 @@ uavo-collections_clean:
 # Define some pointers to the various important pieces of the flight code
 # to prevent these being repeated in every sub makefile
 export MAKE_INC_DIR  := $(ROOT_DIR)/make
+export FLIGHT        := $(ROOT_DIR)/flight
 export PIOS          := $(ROOT_DIR)/flight/PiOS
 export FLIGHTLIB     := $(ROOT_DIR)/flight/Libraries
 export OPMODULEDIR   := $(ROOT_DIR)/flight/Modules

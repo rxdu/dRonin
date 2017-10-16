@@ -46,7 +46,7 @@ $(foreach src, $(ASRC), $(eval $(call ASSEMBLE_TEMPLATE, $(src))))
 $(foreach src, $(SRC) $(MODSRC), $(eval $(call COMPILE_C_TEMPLATE, $(src))))
 
 # Compile: create object files from C++ source files.
-$(foreach src, $(CPPSRC), $(eval $(call COMPILE_CPP_TEMPLATE, $(src))))
+$(foreach src, $(CPPSRC), $(eval $(call COMPILE_CXX_TEMPLATE, $(src))))
 
 $(OUTDIR)/$(TARGET).bin.o: $(OUTDIR)/$(TARGET).bin
 
