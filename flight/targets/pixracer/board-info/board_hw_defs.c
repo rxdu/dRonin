@@ -1252,11 +1252,11 @@ void PIOS_ADC_DMA_irq_handler(void)
 #if defined(PIOS_INCLUDE_CAN)
 #include "pios_can_priv.h"
 struct pios_can_cfg pios_can_cfg = {
-	.regs = CAN2,
+	.regs = CAN1,
 	.init = {
 		// To make it easy to use both F3 and F4 use the other APB1 bus rate
 		// divided by 2. This matches the baud rate across devices
-  		.CAN_Prescaler = 21-1,   /*!< Specifies the length of a time quantum. 
+  		.CAN_Prescaler = 3,   /*!< Specifies the length of a time quantum. 
                                  It ranges from 1 to 1024. */
   		.CAN_Mode = CAN_Mode_Normal,         /*!< Specifies the CAN operating mode. CAN_Mode_Normal CAN_Mode_LoopBack
                                  This parameter can be a value of @ref CAN_operating_mode */
@@ -1264,10 +1264,10 @@ struct pios_can_cfg pios_can_cfg = {
                                  the CAN hardware is allowed to lengthen or 
                                  shorten a bit to perform resynchronization.
                                  This parameter can be a value of @ref CAN_synchronisation_jump_width */
-  		.CAN_BS1 = CAN_BS1_9tq,          /*!< Specifies the number of time quanta in Bit 
+  		.CAN_BS1 = CAN_BS1_11tq,          /*!< Specifies the number of time quanta in Bit 
                                  Segment 1. This parameter can be a value of 
                                  @ref CAN_time_quantum_in_bit_segment_1 */
-  		.CAN_BS2 = CAN_BS2_8tq,          /*!< Specifies the number of time quanta in Bit Segment 2.
+  		.CAN_BS2 = CAN_BS2_2tq,          /*!< Specifies the number of time quanta in Bit Segment 2.
                                  This parameter can be a value of @ref CAN_time_quantum_in_bit_segment_2 */
   		.CAN_TTCM = DISABLE, /*!< Enable or disable the time triggered communication mode.
                                 This parameter can be set either to ENABLE or DISABLE. */
@@ -1275,39 +1275,39 @@ struct pios_can_cfg pios_can_cfg = {
                                   This parameter can be set either to ENABLE or DISABLE. */
   		.CAN_AWUM = DISABLE,  /*!< Enable or disable the automatic wake-up mode. 
                                   This parameter can be set either to ENABLE or DISABLE. */
-  		.CAN_NART = ENABLE,  /*!< Enable or disable the non-automatic retransmission mode.
+  		.CAN_NART = DISABLE,  /*!< Enable or disable the non-automatic retransmission mode.
                                   This parameter can be set either to ENABLE or DISABLE. */
   		.CAN_RFLM = DISABLE,  /*!< Enable or disable the Receive FIFO Locked mode.
                                   This parameter can be set either to ENABLE or DISABLE. */
   		.CAN_TXFP = DISABLE,  /*!< Enable or disable the transmit FIFO priority.
                                   This parameter can be set either to ENABLE or DISABLE. */
 	},
-	.remap = GPIO_AF_CAN2,
+	.remap = GPIO_AF_CAN1,
 	.tx = {
-		.gpio = GPIOB,
+		.gpio = GPIOD,
 		.init = {
-			.GPIO_Pin   = GPIO_Pin_13,
+			.GPIO_Pin   = GPIO_Pin_1,
 			.GPIO_Speed = GPIO_Speed_50MHz,
 			.GPIO_Mode  = GPIO_Mode_AF,
 			.GPIO_OType = GPIO_OType_PP,
 			.GPIO_PuPd  = GPIO_PuPd_UP
 		},
-		.pin_source = GPIO_PinSource13,
+		.pin_source = GPIO_PinSource1,
 	},
 	.rx = {
-		.gpio = GPIOB,
+		.gpio = GPIOD,
 		.init = {
-			.GPIO_Pin   = GPIO_Pin_12,
+			.GPIO_Pin   = GPIO_Pin_0,
 			.GPIO_Speed = GPIO_Speed_50MHz,
 			.GPIO_Mode  = GPIO_Mode_AF,
 			.GPIO_OType = GPIO_OType_PP,
 			.GPIO_PuPd  = GPIO_PuPd_UP
 		},
-		.pin_source = GPIO_PinSource12,
+		.pin_source = GPIO_PinSource0,
 	},
 	.rx_irq = {
 		.init = {
-			.NVIC_IRQChannel = CAN2_RX1_IRQn,
+			.NVIC_IRQChannel = CAN1_RX1_IRQn,
 			.NVIC_IRQChannelPreemptionPriority = PIOS_IRQ_PRIO_HIGHEST,
 			.NVIC_IRQChannelSubPriority = 0,
 			.NVIC_IRQChannelCmd = ENABLE,
@@ -1315,7 +1315,7 @@ struct pios_can_cfg pios_can_cfg = {
 	},
 	.tx_irq = {
 		.init = {
-			.NVIC_IRQChannel = CAN2_TX_IRQn,
+			.NVIC_IRQChannel = CAN1_TX_IRQn,
 			.NVIC_IRQChannelPreemptionPriority = PIOS_IRQ_PRIO_HIGHEST,
 			.NVIC_IRQChannelSubPriority = 0,
 			.NVIC_IRQChannelCmd = ENABLE,

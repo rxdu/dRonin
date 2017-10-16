@@ -43,6 +43,7 @@ MODULES += RTT
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl
+MODULES += UAVCAN
 #MODULES += Stabilization
 #MODULES += FirmwareIAP
 #MODULES += Telemetry
@@ -91,6 +92,10 @@ DEBUG_CM3_DIR = $(PIOSCOMMONLIB)/Debug
 DEBUG_CM3_DIR_INC = $(DEBUG_CM3_DIR)/inc
 OPUAVOBJINC = $(OPUAVOBJ)/inc
 MAVLINKINC = $(FLIGHTLIB)/mavlink/v1.0/common
+
+# UAVCAN 
+include $(PIOS)/../Modules/UAVCAN/libuavcan/include.mk
+include $(PIOS)/../Modules/UAVCAN/libuavcan_drivers/stm32/driver/include.mk
 
 # optional component libraries
 include $(APPLIBDIR)/ChibiOS/library.mk
@@ -168,7 +173,8 @@ SRC += pios_crossfire.c
 
 # List C++ source files here.
 # use file-extension .cpp for C++-files (not .C)
-CPPSRC =
+CPPSRC  = $(LIBUAVCAN_SRC)
+CPPSRC += $(LIBUAVCAN_STM32_SRC)
 
 # List any extra directories to look for include files here.
 #    Each directory must be seperated by a space.
@@ -192,6 +198,8 @@ EXTRAINCDIRS  += $(DEBUG_CM3_DIR_INC)
 EXTRAINCDIRS  += $(MAVLINKINC)
 EXTRAINCDIRS += $(PIOS)/../Modules/RTT
 EXTRAINCDIRS += $(PIOS)/../Modules/TestTask
+EXTRAINCDIRS += $(LIBUAVCAN_INC)
+EXTRAINCDIRS += $(LIBUAVCAN_STM32_INC)
 
 EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${OPTMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
 

@@ -131,7 +131,7 @@ static void testTask(void *parameters)
 
 		// Wait until next update
 		//PIOS_RCVR_WaitActivity(UPDATE_PERIOD_MS);
-		//PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
+		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 		PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
 	}
 }
