@@ -20,15 +20,18 @@ PIOSUAVCAN_SRC := $(shell find $(PIOS_DRIVER_DIR) -type f -name '*.cpp')
 #PIOSUAVCAN_INC := $(PIOS_UAVCAN_MOD)/pios_driver
 
 CPPSRC  += $(LIBUAVCAN_SRC) 
-＃CPPSRC  += $(PIOSUAVCAN_SRC)
+CPPSRC  += $(PIOSUAVCAN_SRC)
 
 EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include
 EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include/dsdlc_generated
 EXTRAINCDIRS += $(PIOS_UAVCAN_MOD)／pios_driver
 
-CPPFLAGS += -DUAVCAN_CPP_VERSION=UAVCAN_CPP11 -std=c++11 
+CPPFLAGS += -DUAVCAN_CPP_VERSION=UAVCAN_CPP11 -pedantic -std=c++11 -fno-rtti -fno-threadsafe-statics
+LDFLAGS  += --specs=nano.specs -nodefaultlibs
 #-fno-threadsafe-statics
 
+#libuavcan:
+#	arm-none-eabi-g++ $(CPPSRC) $(CPPFLAGS)
 
 #
 # DSDL compiler executable

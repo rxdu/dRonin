@@ -95,7 +95,7 @@ MAVLINKINC = $(FLIGHTLIB)/mavlink/v1.0/common
 
 # optional component libraries
 include $(APPLIBDIR)/ChibiOS/library.mk
-include $(FLIGHT)/Modules/UAVCAN/libuavcan_pios.mk
+include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
 
 # List C source files here. (C dependencies are automatically generated.)
 # use file-extension c for "c-only"-files
@@ -299,7 +299,6 @@ CFLAGS += -mapcs-frame
 CFLAGS += -fomit-frame-pointer
 CFLAGS += -ffunction-sections -fdata-sections
 CFLAGS += -Wdouble-promotion
-CFLAGS += --specs=nosys.specs --specs=nano.specs
 
 CFLAGS += -Wall
 CFLAGS += -Werror
@@ -329,10 +328,9 @@ LIBS += $(FLIGHTLIBFILE)
 LDFLAGS = -nostartfiles -Wl,-Map=$(OUTDIR)/$(TARGET).map,--cref,--gc-sections
 LDFLAGS += $(patsubst %,-L%,$(EXTRA_LIBDIRS))
 LDFLAGS += $(patsubst %,-l%,$(EXTRA_LIBS))
-LDFLAGS += -lc_nano -lgcc -lm
+LDFLAGS += -lc_nano -lgcc -lm 
 LDFLAGS += -Wl,--warn-common
 LDFLAGS += -Wl,--fatal-warnings
-#LDFLAGS += -ffunction-sections -fdata-sections -fno-builtin -fno-rtti -fno-exceptions -fno-unwind-tables
 
 #Linker scripts
 LDFLAGS += -T memory.ld $(addprefix -T,$(LINKER_SCRIPTS_APP))
