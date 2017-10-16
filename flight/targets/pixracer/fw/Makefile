@@ -95,6 +95,7 @@ MAVLINKINC = $(FLIGHTLIB)/mavlink/v1.0/common
 
 # optional component libraries
 include $(APPLIBDIR)/ChibiOS/library.mk
+#include $(PIOS)/../Modules/UAVCAN/libuavcan_pios.mk
 
 # List C source files here. (C dependencies are automatically generated.)
 # use file-extension c for "c-only"-files
@@ -169,8 +170,7 @@ SRC += pios_crossfire.c
 
 # List C++ source files here.
 # use file-extension .cpp for C++-files (not .C)
-CPPSRC  = $(LIBUAVCAN_SRC)
-CPPSRC += $(LIBUAVCAN_STM32_SRC)
+CPPSRC  += 
 
 # List any extra directories to look for include files here.
 #    Each directory must be seperated by a space.
