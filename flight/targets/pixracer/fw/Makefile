@@ -103,7 +103,8 @@ include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
 ## OPENPILOT CORE:
 SRC += ${OPMODULEDIR}/System/systemmod.c
 SRC += ${OPMODULEDIR}/System/rgbleds.c
-SRC += chibi_main.c
+# SRC += chibi_main.c
+CPPSRC += chibi_main.cpp
 SRC += pios_board.c
 SRC += pios_usb_board_data.c
 SRC += $(OPUAVOBJ)/uavobjectmanager.c
