@@ -43,7 +43,7 @@ uavcan::uint16_t PIOSUAVCANDriver::getNumFilters() const
 
 uavcan::ICanIface* PIOSUAVCANDriver::getIface(uavcan::uint8_t iface_index) 
 {
-    return nullptr;
+    return (iface_index == 0) ? this : nullptr;
 }
 
 uavcan::uint8_t PIOSUAVCANDriver::getNumIfaces() const

@@ -3,6 +3,7 @@
 
 #include "uavcan/driver/can.hpp"
 
+// PIOS only supports 1 CAN bus 
 #define UAVCAN_PIOS_NUM_IFACES 1
 
 namespace pios_uavcan

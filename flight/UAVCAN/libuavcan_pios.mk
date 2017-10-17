@@ -27,7 +27,6 @@ EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include/dsdlc_generated
 EXTRAINCDIRS += $(PIOS_UAVCAN_MOD)／pios_driver
 
 CPPFLAGS += -DUAVCAN_CPP_VERSION=UAVCAN_CPP11 -pedantic -std=c++11 -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit
-#LDFLAGS  +=  -nodefaultlibs -lstdc++_nano -lsupc++_nano
 
 #
 # DSDL compiler executable
