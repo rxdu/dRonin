@@ -1180,5 +1180,3 @@ $(DOCS_CLEAN_TARGETS): docs_%_clean:
 #
 ##############################
 include $(ROOT_DIR)/make/debug/pixracer-debug.mk
-
-include $(FLIGHT)/UAVCAN/libuavcan_pios.mk

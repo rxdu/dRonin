@@ -297,16 +297,17 @@ static int32_t check_safe_autonomous()
 	//   INSOutdoor |     INS
 	//   INSIndoor  |     INS          (unsafe)
 
-	StateEstimationData stateEstimation;
-	StateEstimationGet(&stateEstimation);
+	// TODO: disabled for RC Car
+	// StateEstimationData stateEstimation;
+	// StateEstimationGet(&stateEstimation);
 
-	if (stateEstimation.AttitudeFilter == STATEESTIMATION_ATTITUDEFILTER_INSINDOOR)
-		return SYSTEMALARMS_CONFIGERROR_NAVFILTER;
+	// if (stateEstimation.AttitudeFilter == STATEESTIMATION_ATTITUDEFILTER_INSINDOOR)
+	// 	return SYSTEMALARMS_CONFIGERROR_NAVFILTER;
 
-	// Anything not allowed is invalid, safe default
-	if (stateEstimation.NavigationFilter != STATEESTIMATION_NAVIGATIONFILTER_INS &&
-		stateEstimation.NavigationFilter != STATEESTIMATION_NAVIGATIONFILTER_RAW)
-		return SYSTEMALARMS_CONFIGERROR_NAVFILTER;
+	// // Anything not allowed is invalid, safe default
+	// if (stateEstimation.NavigationFilter != STATEESTIMATION_NAVIGATIONFILTER_INS &&
+	// 	stateEstimation.NavigationFilter != STATEESTIMATION_NAVIGATIONFILTER_RAW)
+	// 	return SYSTEMALARMS_CONFIGERROR_NAVFILTER;
 
 	return SYSTEMALARMS_CONFIGERROR_NONE;
 }

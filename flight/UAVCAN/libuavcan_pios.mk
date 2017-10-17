@@ -28,10 +28,6 @@ EXTRAINCDIRS += $(PIOS_UAVCAN_MOD)／pios_driver
 
 CPPFLAGS += -DUAVCAN_CPP_VERSION=UAVCAN_CPP11 -pedantic -std=c++11 -fno-rtti -fno-threadsafe-statics
 LDFLAGS  += --specs=nano.specs -nodefaultlibs
-#-fno-threadsafe-statics
-
-#libuavcan:
-#	arm-none-eabi-g++ $(CPPSRC) $(CPPFLAGS)
 
 #
 # DSDL compiler executable

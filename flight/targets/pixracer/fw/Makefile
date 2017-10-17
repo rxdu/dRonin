@@ -28,6 +28,7 @@
 # of this source file; otherwise redistribution is prohibited.
 
 include $(MAKE_INC_DIR)/firmware-defs.mk
+include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
 
 # Set developer code and compile options
 # Set to YES for debugging
@@ -95,7 +96,6 @@ MAVLINKINC = $(FLIGHTLIB)/mavlink/v1.0/common
 
 # optional component libraries
 include $(APPLIBDIR)/ChibiOS/library.mk
-include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
 
 # List C source files here. (C dependencies are automatically generated.)
 # use file-extension c for "c-only"-files

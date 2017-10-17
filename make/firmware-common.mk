@@ -37,7 +37,6 @@ FIRMLIB = $(OUTDIR)/firmware.a
 $(eval $(call ARCHIVE_TEMPLATE, $(FIRMLIB), $(MODOBJ) $(ALLOBJ)))
 
 # Link: create ELF output file from object files.
-#$(eval $(call LINK_TEMPLATE, $(OUTDIR)/$(TARGET).elf, $(FIRMLIB) $(LIBS)))
 $(eval $(call LINK_CXX_TEMPLATE, $(OUTDIR)/$(TARGET).elf, $(FIRMLIB) $(LIBS)))
 
 # Assemble: create object files from assembler source files.

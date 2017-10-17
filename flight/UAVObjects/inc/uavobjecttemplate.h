@@ -80,16 +80,9 @@ static inline int32_t $(NAME)ConnectCallback(UAVObjEventCallback cb) { return UA
 
 static inline int32_t $(NAME)ConnectCallbackCtx(UAVObjEventCallback cb, volatile void *ctx) { return UAVObjConnectCallback($(NAME)Handle(), cb, (void *)ctx, EV_MASK_ALL_UPDATES); }
 
-// static inline int32_t $(NAME)ConnectCopy(volatile $(NAME)Data *dataOut) {
-// 	/* Get the thing once for free first-- no changes */
-// 	$(NAME)Get((void *) dataOut);
-
-// 	return UAVObjConnectCallback($(NAME)Handle(), UAVObjCbCopyData, (void *)dataOut, EV_MASK_ALL_UPDATES);
-// }
-
 static inline int32_t $(NAME)ConnectCopy(volatile $(NAME)Data *dataOut) {
 	/* Get the thing once for free first-- no changes */
-	$(NAME)Get(($(NAME)Data *)((void *) dataOut));
+	$(NAME)Get((void *) dataOut);
 
 	return UAVObjConnectCallback($(NAME)Handle(), UAVObjCbCopyData, (void *)dataOut, EV_MASK_ALL_UPDATES);
 }
