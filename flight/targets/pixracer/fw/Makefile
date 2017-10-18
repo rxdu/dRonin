@@ -44,7 +44,7 @@ MODULES += RTT
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl
-#MODULES += UAVCAN
+MODULES += CANBridge
 #MODULES += Stabilization
 #MODULES += FirmwareIAP
 #MODULES += Telemetry
@@ -72,6 +72,9 @@ MODULES += ManualControl
 # OPTMODULES += FlightStats
 # OPTMODULES += Storm32Bgc
 # OPTMODULES += UAVOCrossfireTelemetry
+
+# List of C++ Modules
+include $(FLIGHT)/Modules/CANBridge/mod_can_bridge.mk
 
 # Paths
 OPUAVOBJINC = $(OPUAVOBJ)/inc
@@ -193,8 +196,9 @@ EXTRAINCDIRS  += $(OPUAVSYNTHDIR)
 EXTRAINCDIRS  += $(BOOTINC)
 EXTRAINCDIRS  += $(DEBUG_CM3_DIR_INC)
 EXTRAINCDIRS  += $(MAVLINKINC)
-EXTRAINCDIRS += $(PIOS)/../Modules/RTT
-EXTRAINCDIRS += $(PIOS)/../Modules/TestTask
+EXTRAINCDIRS += $(FLIGHT)/Modules/RTT
+EXTRAINCDIRS += $(FLIGHT)/Modules/TestTask
+EXTRAINCDIRS += $(FLIGHT)/Modules/CANBridge
 
 EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${OPTMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
 

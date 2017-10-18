@@ -297,13 +297,13 @@ int32_t transmitter_control_update()
 		}
 	}
 
-	JLinkRTTPrintf(0, "Received PPM signal [THR]-[ROL]-[PIT]-[YAW]-[MOD]-[ARM]: %ld, %ld, %ld, %ld, %ld, %ld\n", 
-	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE], 
-	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL],
-	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH],
-	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW],
-	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE],
-	cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING]);
+	// JLinkRTTPrintf(0, "Received PPM signal [THR]-[ROL]-[PIT]-[YAW]-[MOD]-[ARM]: %ld, %ld, %ld, %ld, %ld, %ld\n", 
+	// cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_THROTTLE], 
+	// cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL],
+	// cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_PITCH],
+	// cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_YAW],
+	// cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE],
+	// cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING]);
 	// JLinkRTTPrintf(0, "Received PPM signal [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", cmd.Channel[0], cmd.Channel[1],
 	// 	cmd.Channel[2],cmd.Channel[3],cmd.Channel[4],cmd.Channel[5],cmd.Channel[6], cmd.Channel[7]);
 	// JLinkRTTPrintf(0, "Scaled PPM signal [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", scaledChannel[0], scaledChannel[1],
