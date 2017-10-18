@@ -69,6 +69,7 @@ public:
 };
 
 }
+
 }
 
 #endif /* UAVCAN_PIOS_INTERNAL_HPP */

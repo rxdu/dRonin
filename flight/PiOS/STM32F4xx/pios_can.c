@@ -30,9 +30,13 @@
 
 #include "pios.h"
 
+// #define USE_UAVCAN 
 #if defined(PIOS_INCLUDE_CAN)
 
 #include "pios_can_priv.h"
+
+void PIOS_CAN_TxUAVCAN();
+void PIOS_CAN_RxUAVCAN();
 
 /* Provide a COM driver */
 static void PIOS_CAN_RegisterRxCallback(uintptr_t can_id, pios_com_callback rx_in_cb, uintptr_t context);
@@ -65,9 +69,10 @@ struct pios_can_dev {
 #define CAN_COM_ID      0x11
 #define MAX_SEND_LEN    8
 
-
+#ifndef USE_UAVCAN
 static void PIOS_CAN_RxGeneric(void);
 static void PIOS_CAN_TxGeneric(void);
+#endif
 
 static bool PIOS_CAN_validate(struct pios_can_dev *can_dev)
 {
@@ -181,7 +186,11 @@ static void PIOS_CAN_TxStart(uintptr_t can_id, uint16_t tx_bytes_avail)
 
  	CAN_ITConfig(can_dev->cfg->regs, CAN_IT_TME, ENABLE);
 	
+#ifndef USE_UAVCAN 
 	PIOS_CAN_TxGeneric();
+#else
+	PIOS_CAN_TxUAVCAN();
+#endif
 }
 
 static void PIOS_CAN_RegisterRxCallback(uintptr_t can_id, pios_com_callback rx_in_cb, uintptr_t context)
@@ -222,6 +231,7 @@ static void PIOS_CAN_RegisterTxCallback(uintptr_t can_id, pios_com_callback tx_o
 //! The mapping of message types to CAN BUS StdID
 static struct pios_queue *pios_can_queues[PIOS_CAN_LAST];
 
+#ifndef USE_UAVCAN
 /**
  * Process received CAN messages and push them out any corresponding
  * queues. Called from ISR.
@@ -246,6 +256,7 @@ static bool process_received_message(CanRxMsg message)
 
 	return woken;
 }
+#endif
 
 /**
  * Create a queue to receive messages for a particular message
@@ -285,25 +296,41 @@ struct pios_queue * PIOS_CAN_RegisterMessageQueue(uintptr_t id, enum pios_can_me
 void CAN1_RX0_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
+#ifndef USE_UAVCAN 
 	PIOS_CAN_RxGeneric();
+#else
+	PIOS_CAN_RxUAVCAN();
+#endif
 	PIOS_IRQ_Epilogue();
 }
 void CAN1_RX1_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
+#ifndef USE_UAVCAN 
 	PIOS_CAN_RxGeneric();
+#else
+	PIOS_CAN_RxUAVCAN();
+#endif
 	PIOS_IRQ_Epilogue();
 }
 void CAN2_RX0_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
+#ifndef USE_UAVCAN 
 	PIOS_CAN_RxGeneric();
+#else
+	PIOS_CAN_RxUAVCAN();
+#endif
 	PIOS_IRQ_Epilogue();
 }
 void CAN2_RX1_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
+#ifndef USE_UAVCAN 
 	PIOS_CAN_RxGeneric();
+#else
+	PIOS_CAN_RxUAVCAN();
+#endif
 	PIOS_IRQ_Epilogue();
 }
 
@@ -311,16 +338,25 @@ void CAN2_RX1_IRQHandler(void)
 void CAN1_TX_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
+#ifndef USE_UAVCAN 
 	PIOS_CAN_TxGeneric();
+#else
+	PIOS_CAN_TxUAVCAN();
+#endif
 	PIOS_IRQ_Epilogue();
 }
 void CAN2_TX_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
+#ifndef USE_UAVCAN 
 	PIOS_CAN_TxGeneric();
+#else
+	PIOS_CAN_TxUAVCAN();
+#endif
 	PIOS_IRQ_Epilogue();
 }
 
+#ifndef USE_UAVCAN /* start of def USE_UAVCAN */
 /**
  * @brief  This function handles CAN1 RX1 request.
  * @note   We are using RX1 instead of RX0 to avoid conflicts with the
@@ -379,7 +415,7 @@ static void PIOS_CAN_TxGeneric(void)
 		// TODO: deal with failure to send and keep the message to retransmit
 	}
 }
-
+#endif /* end of def USE_UAVCAN */
 
 /**
  * PIOS_CAN_TxData transmits a data message with a specified ID

@@ -5,10 +5,10 @@
 #
 # Directory containing this makefile
 #
-PIOS_UAVCAN_MOD	:=	$(dir $(lastword $(MAKEFILE_LIST)))
+PIOS_UAVCAN_LIB	:=	$(dir $(lastword $(MAKEFILE_LIST)))
 
-LIBUAVCAN_DIR := $(PIOS_UAVCAN_MOD)/libuavcan
-PIOS_DRIVER_DIR := $(PIOS_UAVCAN_MOD)pios_driver
+LIBUAVCAN_DIR := $(PIOS_UAVCAN_LIB)/libuavcan
+PIOS_DRIVER_DIR := $(PIOS_UAVCAN_LIB)/pios_driver
 
 #
 # Library sources
@@ -17,14 +17,14 @@ LIBUAVCAN_SRC := $(shell find $(LIBUAVCAN_DIR)/src -type f -name '*.cpp')
 PIOSUAVCAN_SRC := $(shell find $(PIOS_DRIVER_DIR) -type f -name '*.cpp')
 
 #LIBUAVCAN_INC := $(LIBUAVCAN_DIR)/include
-#PIOSUAVCAN_INC := $(PIOS_UAVCAN_MOD)/pios_driver
+#PIOSUAVCAN_INC := $(PIOS_UAVCAN_LIB)/pios_driver
 
 CPPSRC  += $(LIBUAVCAN_SRC) 
 CPPSRC  += $(PIOSUAVCAN_SRC)
 
 EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include
 EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include/dsdlc_generated
-EXTRAINCDIRS += $(PIOS_UAVCAN_MOD)／pios_driver
+EXTRAINCDIRS += $(PIOS_DRIVER_DIR) 
 
 CPPFLAGS += -DUAVCAN_CPP_VERSION=UAVCAN_CPP11 -std=c++11 -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit
 

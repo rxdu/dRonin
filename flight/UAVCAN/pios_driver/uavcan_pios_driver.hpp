@@ -6,6 +6,9 @@
 // PIOS only supports 1 CAN bus 
 #define UAVCAN_PIOS_NUM_IFACES 1
 
+extern "C" void PIOS_CAN_TxUAVCAN();
+extern "C" void PIOS_CAN_RxUAVCAN();
+
 namespace pios_uavcan
 {
 
@@ -52,6 +55,9 @@ public:
     uavcan::ICanIface* getIface(uavcan::uint8_t iface_index) override;
     
     uavcan::uint8_t getNumIfaces() const override;
+
+    void handleTxInterrupt();
+    void handleRxInterrupt();
 };
 
 }

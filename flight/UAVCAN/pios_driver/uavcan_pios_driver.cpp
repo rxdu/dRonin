@@ -3,6 +3,16 @@
 using namespace uavcan;
 using namespace pios_uavcan;
 
+void PIOS_CAN_TxUAVCAN()
+{   
+    PIOSUAVCANDriver::instance().handleTxInterrupt();
+}
+
+void PIOS_CAN_RxUAVCAN()
+{
+    PIOSUAVCANDriver::instance().handleRxInterrupt();
+}
+
 uavcan::int16_t PIOSUAVCANDriver::send(const uavcan::CanFrame& frame,
     uavcan::MonotonicTime tx_deadline,
     uavcan::CanIOFlags flags)
@@ -49,4 +59,14 @@ uavcan::ICanIface* PIOSUAVCANDriver::getIface(uavcan::uint8_t iface_index)
 uavcan::uint8_t PIOSUAVCANDriver::getNumIfaces() const
 {
     return UAVCAN_PIOS_NUM_IFACES;
+}
+
+void PIOSUAVCANDriver::handleTxInterrupt()
+{
+
+}
+
+void PIOSUAVCANDriver::handleRxInterrupt()
+{
+
 }
