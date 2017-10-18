@@ -298,8 +298,15 @@ uint8_t PIOS_CAN_AllMailboxesBusy()
 	return is_busy;
 }
 
+/**
+ * @brief  This function handles CAN1 RX1 request.
+ * @note   We are using RX1 instead of RX0 to avoid conflicts with the
+ *         USB IRQ handler.
+ */
 static void PIOS_CAN_RxUAVCAN(void)
 {
+	uint8_t is_overrun = (CAN_GetITStatus(can_dev->cfg->regs, CAN_IT_FOV1) == SET)? 0x01:0x00;
+
 	CAN_ClearITPendingBit(can_dev->cfg->regs, CAN_IT_FMP1);
 	
 	bool valid = PIOS_CAN_validate(can_dev);
@@ -308,19 +315,24 @@ static void PIOS_CAN_RxUAVCAN(void)
 	CanRxMsg RxMessage;
 	CAN_Receive(CAN1, CAN_FIFO1, &RxMessage);
 	
-	if (RxMessage.StdId == CAN_COM_ID) {
-		// TODO: remove this need_yield/woken pattern when f1 is on chibios
-		bool rx_need_yield;
-		if (can_dev->rx_in_cb) {
-			(void) (can_dev->rx_in_cb)(can_dev->rx_in_context, RxMessage.Data, RxMessage.DLC, NULL, &rx_need_yield);
-		}
-	} else {
-		//process_received_message(RxMessage);
+	uint32_t msg_id;
+	uint8_t is_ext;
+	if(RxMessage.IDE == CAN_Id_Standard)
+	{
+		msg_id = RxMessage.StdId;
+		is_ext = 0x00;
 	}
-
-	PIOSUAVCAN_RxISR_Callback();
+	else 
+	{		
+		msg_id = RxMessage.ExtId;
+		is_ext = 0x01;
+	}
+	PIOSUAVCAN_RxISR_Callback(msg_id, is_ext, RxMessage.DLC, RxMessage.Data, is_overrun);
 }
 
+/**
+ * @brief  This function handles CAN1 TX irq 
+ */
 static void PIOS_CAN_TxUAVCAN(void)
 {
 	uint8_t mailbox_id;
@@ -344,7 +356,7 @@ static void PIOS_CAN_TxUAVCAN(void)
 	else
 	{
 		mailbox_id = 0xff;
-		txok = CAN_TxStatus_Failed;
+		txok = 0x00;
 	}
 
 	CAN_ClearITPendingBit(can_dev->cfg->regs, CAN_IT_TME);

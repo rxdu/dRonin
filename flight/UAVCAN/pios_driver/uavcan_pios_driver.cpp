@@ -24,9 +24,9 @@ extern "C" void PIOSUAVCAN_TxISR_Callback(uavcan::uint8_t mailbox_index, bool tx
     PIOSUAVCANDriver::instance().handleTxInterrupt(mailbox_index, txok);
 }
 
-extern "C" void PIOSUAVCAN_RxISR_Callback()
+extern "C" void PIOSUAVCAN_RxISR_Callback(uint32_t msg_id, bool is_ext, uint8_t dlc, uint8_t data[8], bool overrun)
 {
-    PIOSUAVCANDriver::instance().handleRxInterrupt();
+    PIOSUAVCANDriver::instance().handleRxInterrupt(msg_id, is_ext, dlc, data, overrun);
 }
 
 
@@ -283,12 +283,13 @@ void PIOSUAVCANDriver::handleTxMailboxInterrupt(uavcan::uint8_t mailbox_index, b
 
 void PIOSUAVCANDriver::handleTxInterrupt(uavcan::uint8_t mailbox_index, bool txok)
 {
+    handleTxMailboxInterrupt(mailbox_index, txok, 0);
     BusEvent::instance().signalFromInterrupt();
     
     pollErrorFlagsFromISR();
 }
 
-void PIOSUAVCANDriver::handleRxInterrupt()
+void PIOSUAVCANDriver::handleRxInterrupt(uint32_t msg_id, bool is_ext, uint8_t dlc, uint8_t data[8], bool overrun)
 {
     BusEvent::instance().signalFromInterrupt();
     

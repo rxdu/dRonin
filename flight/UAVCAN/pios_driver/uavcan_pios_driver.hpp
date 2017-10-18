@@ -104,7 +104,7 @@ public:
     void handleTxMailboxInterrupt(uavcan::uint8_t mailbox_index, bool txok, const uavcan::uint64_t utc_usec);
     void resetDriverState();
     void handleTxInterrupt(uavcan::uint8_t mailbox_index, bool txok);
-    void handleRxInterrupt();
+    void handleRxInterrupt(uint32_t msg_id, bool is_ext, uint8_t dlc, uint8_t data[8], bool overrun);
 };
 
 }
