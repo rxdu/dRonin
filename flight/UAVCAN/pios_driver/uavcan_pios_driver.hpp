@@ -2,15 +2,33 @@
 #define UAVCAN_PIOS_DRIVER_HPP
 
 #include "uavcan/driver/can.hpp"
+#include "uavcan_pios_internal.hpp"
 
-// PIOS only supports 1 CAN bus 
-#define UAVCAN_PIOS_NUM_IFACES 1
+// This driver only supports 1 CAN bus @ 1Mbps
+#define UAVCAN_PIOS_NUM_IFACES      1
+#define UAVCAN_PIOS_RX_BUF_SIZE     128
 
-extern "C" void PIOS_CAN_TxUAVCAN();
-extern "C" void PIOS_CAN_RxUAVCAN();
+#define CAN_TxStatus_NoMailBox      ((uint8_t)0x04) 
 
 namespace pios_uavcan
 {
+
+enum { NumTxMailboxes = 3 };
+enum { NumFilters = 14 };
+
+/**
+ * Driver error codes.
+ * These values can be returned from driver functions negated.
+ */
+//static const uavcan::int16_t ErrUnknown               = 1000; ///< Reserved for future use
+static const uavcan::int16_t ErrNotImplemented          = 1001; ///< Feature not implemented
+static const uavcan::int16_t ErrInvalidBitRate          = 1002; ///< Bit rate not supported
+static const uavcan::int16_t ErrLogic                   = 1003; ///< Internal logic error
+static const uavcan::int16_t ErrUnsupportedFrame        = 1004; ///< Frame not supported (e.g. RTR, CAN FD, etc)
+static const uavcan::int16_t ErrMsrInakNotSet           = 1005; ///< INAK bit of the MSR register is not 1
+static const uavcan::int16_t ErrMsrInakNotCleared       = 1006; ///< INAK bit of the MSR register is not 0
+static const uavcan::int16_t ErrBitRateNotDetected      = 1007; ///< Auto bit rate detection could not be finished
+static const uavcan::int16_t ErrFilterNumConfigs        = 1008; ///< Number of filters is more than supported
 
 /**
  * This class implements CAN driver interface for libuavcan.
@@ -20,7 +38,33 @@ namespace pios_uavcan
  */
 class PIOSUAVCANDriver: public uavcan::ICanDriver, public uavcan::ICanIface, uavcan::Noncopyable
 {
-    PIOSUAVCANDriver() = default;
+    PIOSUAVCANDriver()
+    : rx_queue_(rx_buffer_, UAVCAN_PIOS_RX_BUF_SIZE)
+    {};
+
+    // RX Queue, which manages RX buffer
+    pios_uavcan_internal::RxQueue rx_queue_;
+
+    // Memory allocated for RX&TX items
+    pios_uavcan_internal::CanRxItem rx_buffer_[UAVCAN_PIOS_RX_BUF_SIZE];
+    pios_uavcan_internal::TxItem tx_pending_[NumTxMailboxes];
+
+    //BusEvent& update_event_;   
+    uavcan::uint64_t error_cnt_;
+    uavcan::uint32_t served_aborts_cnt_; 
+    uavcan::uint8_t peak_tx_mailbox_index_;
+    bool had_activity_;
+
+    // Helper functions
+    void pollErrorFlagsFromISR();
+    void discardTimedOutTxMailboxes(uavcan::MonotonicTime current_time);
+    bool canAcceptNewTxFrame(const uavcan::CanFrame& frame) const;
+    // This function returns select masks indicating which interfaces are available for read/write.
+    uavcan::CanSelectMasks makeSelectMasks(const uavcan::CanFrame* (& pending_tx)[uavcan::MaxCanIfaces]) const;    
+
+    bool isRxBufferEmpty() const;
+    unsigned getRxQueueLength() const;    
+    bool hadActivity();
 
 public:
     /**
@@ -42,7 +86,7 @@ public:
             uavcan::CanIOFlags& out_flags) override;
 
     uavcan::int16_t select(uavcan::CanSelectMasks& inout_masks,
-            const uavcan::CanFrame* (&)[uavcan::MaxCanIfaces],
+            const uavcan::CanFrame* (& pending_tx)[uavcan::MaxCanIfaces],
             uavcan::MonotonicTime blocking_deadline) override;
 
     uavcan::int16_t configureFilters(const uavcan::CanFilterConfig* filter_configs,
@@ -56,7 +100,10 @@ public:
     
     uavcan::uint8_t getNumIfaces() const override;
 
-    void handleTxInterrupt();
+    // Connection with PIOS
+    void handleTxMailboxInterrupt(uavcan::uint8_t mailbox_index, bool txok, const uavcan::uint64_t utc_usec);
+    void resetDriverState();
+    void handleTxInterrupt(uavcan::uint8_t mailbox_index, bool txok);
     void handleRxInterrupt();
 };
 

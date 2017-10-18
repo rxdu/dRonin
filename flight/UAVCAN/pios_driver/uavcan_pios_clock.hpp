@@ -14,10 +14,6 @@ class PIOSUAVCANClock : public uavcan::ISystemClock, uavcan::Noncopyable
 {
     PIOSUAVCANClock() = default;
 
-    uavcan::MonotonicTime getMonotonic()     const override;
-    uavcan::UtcTime getUtc()                 const override;
-    void adjustUtc(uavcan::UtcDuration adjustment) override;
-
 public:
     /**
      * Calls clock::init() as needed.
@@ -27,6 +23,10 @@ public:
         static PIOSUAVCANClock pios_uavcan_clock;
         return pios_uavcan_clock;
     }
+
+    uavcan::MonotonicTime getMonotonic()     const override;
+    uavcan::UtcTime getUtc()                 const override;
+    void adjustUtc(uavcan::UtcDuration adjustment) override;
 };
 
 }

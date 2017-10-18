@@ -146,12 +146,15 @@ void PIOS_Board_Init(void)
 	else
 		JLinkWriteString(0, "CAN init successful\n");
 
+#ifndef PIOS_INCLUDE_UAVCAN 
 	if (PIOS_COM_Init(&pios_com_can_id, &pios_can_com_driver, pios_can_id,
 					  PIOS_COM_CAN_RX_BUF_LEN,
 					  PIOS_COM_CAN_TX_BUF_LEN))
 		PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_CAN);
 	else
 		JLinkWriteString(0, "CAN comm init successful\n");
+#endif
+	// Otherwise, delegate COM functions to UAVCAN library 
 
 	/* pios_com_bridge_id = pios_com_can_id; */
 #endif

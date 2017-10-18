@@ -1,6 +1,11 @@
 #ifndef UAVCAN_PIOS_INTERNAL_HPP
 #define UAVCAN_PIOS_INTERNAL_HPP
 
+extern "C"
+{
+#include <hal.h>
+}
+
 #include "uavcan/driver/can.hpp"
 
 namespace pios_uavcan
@@ -8,20 +13,25 @@ namespace pios_uavcan
 
 namespace pios_uavcan_internal
 {
+
+class BusEvent
+{    
+    BusEvent() = default;
+
+public:
+    static BusEvent& instance()
+    {
+        static BusEvent bus_event;
+        return bus_event;
+    }   
+
+    bool wait(uavcan::MonotonicDuration duration);
+    
+    void signal();
+    
+    void signalFromInterrupt();
+};    
    
-/**
- * RX queue item.
- * The application shall not use this directly.
- */
-struct CanRxItem
-{
-    uavcan::uint64_t utc_usec;
-    uavcan::CanFrame frame;
-    uavcan::CanIOFlags flags;
-
-    CanRxItem():utc_usec(0),flags(0){}
-};
-
 struct TxItem
 {
     uavcan::MonotonicTime deadline;
@@ -35,6 +45,19 @@ struct TxItem
         , loopback(false)
         , abort_on_error(false)
     { }
+};
+
+/**
+ * RX queue item.
+ * The application shall not use this directly.
+ */
+struct CanRxItem
+{
+    uavcan::uint64_t utc_usec;
+    uavcan::CanFrame frame;
+    uavcan::CanIOFlags flags;
+
+    CanRxItem():utc_usec(0),flags(0){}
 };
 
 class RxQueue
@@ -66,6 +89,12 @@ public:
     unsigned getLength() const { return len_; }
 
     uavcan::uint32_t getOverflowCount() const { return overflow_cnt_; }
+};
+
+struct CriticalSectionLocker
+{
+    CriticalSectionLocker() { chSysSuspend(); }
+    ~CriticalSectionLocker() { chSysEnable(); }
 };
 
 }
