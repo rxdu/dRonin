@@ -1,6 +1,6 @@
 #include "uavcan_pios_internal.hpp"
 
-using namespace pios_uavcan_internal;
+using namespace pios_uavcan::pios_uavcan_internal;
 
 /*
  * CanIface::RxQueue

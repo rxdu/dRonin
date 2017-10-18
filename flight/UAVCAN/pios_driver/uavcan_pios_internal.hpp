@@ -3,9 +3,12 @@
 
 #include "uavcan/driver/can.hpp"
 
-namespace pios_uavcan_internal
+namespace pios_uavcan
 {
 
+namespace pios_uavcan_internal
+{
+   
 /**
  * RX queue item.
  * The application shall not use this directly.
@@ -65,6 +68,7 @@ public:
     uavcan::uint32_t getOverflowCount() const { return overflow_cnt_; }
 };
 
+}
 }
 
 #endif /* UAVCAN_PIOS_INTERNAL_HPP */
