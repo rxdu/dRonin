@@ -125,6 +125,7 @@ void PIOS_Board_Init(void)
 	PIOS_TIM_InitClock(&tim_4_cfg);
 #ifdef PIOS_INCLUDE_UAVCAN 
 	// Timer for UAVCAN clock
+	PIOS_TIM_ITConfig(&tim_5_cfg, TIM_IT_Update, ENABLE);
 	PIOS_TIM_InitClock(&tim_5_cfg);
 #endif
 

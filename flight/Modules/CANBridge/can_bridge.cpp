@@ -14,16 +14,11 @@ CANBridge::CANBridge():
     can_node_(pios_uavcan::PIOSUAVCANDriver::instance(),
         pios_uavcan::PIOSUAVCANClock::instance()),
     kv_pub_(can_node_),
+    kv_sub_(can_node_),
     started_(false)
 {
     can_node_.setNodeID(16);
-    can_node_.setName("CANBridge");
-    uavcan::protocol::SoftwareVersion swver;
-    
-    swver.vcs_commit = 0xef;
-    swver.optional_field_flags = swver.OPTIONAL_FIELD_FLAG_VCS_COMMIT;
-    
-    can_node_.setSoftwareVersion(swver);
+    can_node_.setName("pixcar.CANBridge");
 
     const int node_init_res = can_node_.start();
     if (node_init_res < 0)
@@ -33,11 +28,23 @@ CANBridge::CANBridge():
     
     const int kv_pub_init_res = kv_pub_.init();
     if (kv_pub_init_res < 0)
-    {
         SEGGER_RTT_WriteString(0, "Failed to init publisher\n");
-    }
+    else
+        SEGGER_RTT_WriteString(0, "Publisher init successfully\n");
     kv_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
     kv_pub_.setPriority(uavcan::TransferPriority::MiddleLower);    
+
+    // const int kv_sub_start_res =
+    // kv_sub_.start([&](const uavcan::protocol::debug::KeyValue& msg)
+    //     {
+    //         SEGGER_RTT_WriteString(0, "Msg received\n");
+    //         JLinkRTTPrintf(0, "msg key: %d, %d, %d\n",msg.key[0],msg.key[1],msg.key[2]);
+    //     }
+    // );
+    // if (kv_sub_start_res < 0)
+    //     SEGGER_RTT_WriteString(0, "Failed to init subscriber\n");
+    // else
+    //     SEGGER_RTT_WriteString(0, "Subscriber init successfully\n");
 
     can_node_.setModeOperational();    
 }
@@ -65,9 +72,22 @@ void CANBridge::updateComm()
      * ASCII strings can be directly assigned or appended to string-like arrays.
      * For more info, please read the documentation for the class uavcan::Array<>.
      */
-    kv_msg.key = "a";   // "a"
-    kv_msg.key += "b";  // "ab"
-    kv_msg.key += "c";  // "abc"
+    // kv_msg.key = "r";   // "a"
+    // kv_msg.key += "u";  // "ab"
+    // kv_msg.key += "i";  // "abc"
+    // kv_msg.key += "x";  // "abc"
+    // kv_msg.key += "i";  // "abc"
+    // kv_msg.key += "a";  // "abc"
+    // kv_msg.key += "n";  // "abc"
+    // kv_msg.key += "g";  // "abc"
+    // kv_msg.key += "d";  // "abc"
+    // kv_msg.key += "u";  // "abc"
+    kv_msg.key = "ruixiang";
+
+    // JLinkRTTPrintf(0, "cap: %ld, used: %ld, peak: %ld\n", 
+    //     can_node_.getAllocator().getBlockCapacity(), 
+    //     can_node_.getAllocator().getNumUsedBlocks(),
+    //     can_node_.getAllocator().getPeakNumUsedBlocks());
 
     /*
      * Publishing the message.

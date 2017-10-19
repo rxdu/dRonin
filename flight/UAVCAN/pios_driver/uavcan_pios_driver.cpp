@@ -3,6 +3,7 @@
 
 extern "C" {
     #include "pios.h"
+    #include "jlink_rtt.h"
 }
 
 using namespace uavcan;
@@ -26,6 +27,8 @@ extern "C" void PIOSUAVCAN_TxISR_Callback(uavcan::uint8_t mailbox_index, bool tx
 
 extern "C" void PIOSUAVCAN_RxISR_Callback(uint32_t msg_id, bool is_ext, uint8_t dlc, uint8_t data[8], bool overrun)
 {
+    // JLinkRTTPrintf(0, "id: %x, dlc: %x, data: %2x, %2x, %2x, %2x, %2x, %2x, %2x, %2x\n", 
+    //     msg_id, dlc, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7] );   
     PIOSUAVCANDriver::instance().handleRxInterrupt(msg_id, is_ext, dlc, data, overrun);
 }
 
@@ -283,7 +286,9 @@ void PIOSUAVCANDriver::handleTxMailboxInterrupt(uavcan::uint8_t mailbox_index, b
 
 void PIOSUAVCANDriver::handleTxInterrupt(uavcan::uint8_t mailbox_index, bool txok)
 {
-    handleTxMailboxInterrupt(mailbox_index, txok, 0);
+    // (mailbox_index ＞＝ NumTxMailboxes) means all mailboxes are full
+    if(mailbox_index < NumTxMailboxes)
+        handleTxMailboxInterrupt(mailbox_index, txok, 0);
     BusEvent::instance().signalFromInterrupt();
     
     pollErrorFlagsFromISR();
@@ -291,6 +296,35 @@ void PIOSUAVCANDriver::handleTxInterrupt(uavcan::uint8_t mailbox_index, bool txo
 
 void PIOSUAVCANDriver::handleRxInterrupt(uint32_t msg_id, bool is_ext, uint8_t dlc, uint8_t data[8], bool overrun)
 {
+    // process message from CAN bus
+    if (overrun)
+        error_cnt_++;
+
+    /*
+     * Read the frame contents
+     */
+    uavcan::CanFrame frame;
+
+    frame.id = msg_id;
+    if(is_ext)
+        frame.id |= uavcan::CanFrame::FlagEFF;
+
+    frame.dlc = dlc;
+
+    frame.data[0] = data[0];
+    frame.data[1] = data[1];
+    frame.data[2] = data[2];
+    frame.data[3] = data[3];
+    frame.data[4] = data[4];
+    frame.data[5] = data[5];
+    frame.data[6] = data[6];
+    frame.data[7] = data[7];
+
+    /*
+     * Store with timeout into the FIFO buffer and signal update event
+     */
+    rx_queue_.push(frame, 0, 0);
+    had_activity_ = true;
     BusEvent::instance().signalFromInterrupt();
     
     pollErrorFlagsFromISR();

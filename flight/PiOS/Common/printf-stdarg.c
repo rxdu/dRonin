@@ -221,22 +221,22 @@ int sprintf(char *out, const char *format, ...)
 }
 
 // TK: added for alternative parameter passing
-int vsprintf(char *out, const char *format, va_list args)
-{
-	char *_out;
-	_out = out;
-	return print(&_out, format, args);
-}
+// int vsprintf(char *out, const char *format, va_list args)
+// {
+// 	char *_out;
+// 	_out = out;
+// 	return print(&_out, format, args);
+// }
 
-int snprintf(char *buf, size_t count, const char *format, ...)
-{
-	va_list args;
+// int snprintf(char *buf, size_t count, const char *format, ...)
+// {
+// 	va_list args;
 
-	(void)count;
+// 	(void)count;
 
-	va_start(args, format);
-	return print(&buf, format, args);
-}
+// 	va_start(args, format);
+// 	return print(&buf, format, args);
+// }
 
 /**
   * @}

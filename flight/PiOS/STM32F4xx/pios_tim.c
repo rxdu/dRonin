@@ -69,6 +69,11 @@ static struct pios_tim_dev * PIOS_TIM_alloc(void)
 	return (tim_dev);
 }
 
+void PIOS_TIM_ITConfig(const struct pios_tim_clock_cfg * cfg, uint16_t TIM_IT, FunctionalState NewState)
+{
+	TIM_ITConfig(cfg->timer,TIM_IT,NewState);
+}
+
 int32_t PIOS_TIM_InitClock(const struct pios_tim_clock_cfg * cfg)
 {
 	PIOS_DEBUG_Assert(cfg);
@@ -317,11 +322,11 @@ uint64_t PIOS_UAVCAN_TIM_GetMonoTime()
 	uint64_t usec = 0;
 	volatile uint64_t time = time_mono;
 	
-	uint32_t cnt = TIM2->CNT;
-	if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET)
+	uint32_t cnt = TIM5->CNT;
+	if (TIM_GetITStatus(TIM5, TIM_IT_Update) == SET)
 	{
-		cnt = TIM2->CNT;
-		time += TIM2->ARR;
+		cnt = TIM5->CNT;
+		time += TIM5->ARR;
 	}
 	usec = time + cnt;
 
@@ -343,7 +348,7 @@ static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
 
 	time_mono += overflow_count;
 	
-	JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
+	// JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
 }
 
 /* Bind Interrupt Handlers

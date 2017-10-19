@@ -12,6 +12,7 @@ class CANBridge
 
     uavcan::Node<NodeMemoryPoolSize> can_node_;
     uavcan::Publisher<uavcan::protocol::debug::KeyValue> kv_pub_;
+    uavcan::Subscriber<uavcan::protocol::debug::KeyValue> kv_sub_;
 
 public:
     bool started_;

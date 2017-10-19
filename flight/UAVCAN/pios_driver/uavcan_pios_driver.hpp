@@ -38,9 +38,8 @@ static const uavcan::int16_t ErrFilterNumConfigs        = 1008; ///< Number of f
  */
 class PIOSUAVCANDriver: public uavcan::ICanDriver, public uavcan::ICanIface, uavcan::Noncopyable
 {
-    PIOSUAVCANDriver()
-    : rx_queue_(rx_buffer_, UAVCAN_PIOS_RX_BUF_SIZE)
-    {};
+    PIOSUAVCANDriver(): 
+        rx_queue_(rx_buffer_, UAVCAN_PIOS_RX_BUF_SIZE){};
 
     // RX Queue, which manages RX buffer
     pios_uavcan_internal::RxQueue rx_queue_;

@@ -34,6 +34,8 @@
 
 #include "pios_can_priv.h"
 
+#include "jlink_rtt.h"
+
 #ifdef PIOS_INCLUDE_UAVCAN 
 /* Provide a UAVCAN driver */
 /* Functions defined in uavcan_pios_driver.cpp */
@@ -43,6 +45,8 @@ void PIOSUAVCAN_RxISR_Callback();
 
 static void PIOS_CAN_TxUAVCAN(void);
 static void PIOS_CAN_RxUAVCAN(void);
+
+static void PIOS_UAVCAN_Start(uintptr_t can_id);
 #else
 /* Provide a COM driver */
 static void PIOS_CAN_RegisterRxCallback(uintptr_t can_id, pios_com_callback rx_in_cb, uintptr_t context);
@@ -168,6 +172,7 @@ int32_t PIOS_CAN_Init(uintptr_t *can_id, const struct pios_can_cfg *cfg)
 
 #ifdef PIOS_INCLUDE_UAVCAN 
 	PIOSUAVCAN_ResetDriverState();
+	PIOS_UAVCAN_Start(*can_id);
 #endif
 
 	return(0);
@@ -214,6 +219,16 @@ int32_t PIOS_CAN_TxData(uintptr_t id, enum pios_can_messages msg_id, uint8_t *da
 /////////////////////////////////////////////////////////////////////////
 #ifdef PIOS_INCLUDE_UAVCAN /* start of def PIOS_INCLUDE_UAVCAN */
 /////////////////////////////////////////////////////////////////////////
+
+static void PIOS_UAVCAN_Start(uintptr_t can_id)
+{	
+	struct pios_can_dev *can_dev = (struct pios_can_dev *)can_id;
+	bool valid = PIOS_CAN_validate(can_dev);
+	PIOS_Assert(valid);
+	
+	CAN_ITConfig(can_dev->cfg->regs, CAN_IT_FMP1, ENABLE);
+	CAN_ITConfig(can_dev->cfg->regs, CAN_IT_TME, ENABLE);
+}
 
 /**
  * PIOS_CAN_TxUAVCANData transmits a data message with a specified ID
@@ -305,6 +320,8 @@ uint8_t PIOS_CAN_AllMailboxesBusy()
  */
 static void PIOS_CAN_RxUAVCAN(void)
 {
+	// SEGGER_RTT_WriteString(0, "CAN1 RX1 ISR Triggered\n");
+
 	uint8_t is_overrun = (CAN_GetITStatus(can_dev->cfg->regs, CAN_IT_FOV1) == SET)? 0x01:0x00;
 
 	CAN_ClearITPendingBit(can_dev->cfg->regs, CAN_IT_FMP1);
@@ -559,6 +576,7 @@ void CAN1_RX0_IRQHandler(void)
 #endif
 	PIOS_IRQ_Epilogue();
 }
+
 void CAN1_RX1_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
@@ -569,6 +587,7 @@ void CAN1_RX1_IRQHandler(void)
 #endif
 	PIOS_IRQ_Epilogue();
 }
+
 void CAN2_RX0_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
@@ -579,6 +598,7 @@ void CAN2_RX0_IRQHandler(void)
 #endif
 	PIOS_IRQ_Epilogue();
 }
+
 void CAN2_RX1_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();
@@ -601,6 +621,7 @@ void CAN1_TX_IRQHandler(void)
 #endif
 	PIOS_IRQ_Epilogue();
 }
+
 void CAN2_TX_IRQHandler(void)
 {
 	PIOS_IRQ_Prologue();

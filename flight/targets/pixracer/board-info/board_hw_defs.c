@@ -859,6 +859,14 @@ static const TIM_TimeBaseInitTypeDef tim_4_time_base = {
 	.TIM_RepetitionCounter = 0x0000,
 };
 
+static const TIM_TimeBaseInitTypeDef tim_5_time_base = {
+	.TIM_Prescaler = (PIOS_PERIPHERAL_APB1_COUNTER_CLOCK / 1000000) - 1,
+	.TIM_ClockDivision = TIM_CKD_DIV1,
+	.TIM_CounterMode = TIM_CounterMode_Up,
+	.TIM_Period = 0xFFFF,
+	.TIM_RepetitionCounter = 0x0000,
+};
+
 // Set up timers that only have inputs on APB2
 static const TIM_TimeBaseInitTypeDef tim_1_8_time_base = {
 	.TIM_Prescaler = (PIOS_PERIPHERAL_APB2_COUNTER_CLOCK / 1000000) - 1,
@@ -867,15 +875,6 @@ static const TIM_TimeBaseInitTypeDef tim_1_8_time_base = {
 	.TIM_Period = 0xFFFF,
 	.TIM_RepetitionCounter = 0x0000,
 };
-
-static const TIM_TimeBaseInitTypeDef tim_5_time_base = {
-	.TIM_Prescaler = (PIOS_PERIPHERAL_APB2_COUNTER_CLOCK / 1000000) - 1,
-	.TIM_ClockDivision = TIM_CKD_DIV1,
-	.TIM_CounterMode = TIM_CounterMode_Up,
-	.TIM_Period = 0xFFFF,
-	.TIM_RepetitionCounter = 0x0000,
-};
-
 
 //Timers used for inputs (3, 8)
 static const struct pios_tim_clock_cfg tim_3_cfg = {

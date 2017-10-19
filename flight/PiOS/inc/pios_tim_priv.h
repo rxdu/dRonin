@@ -23,6 +23,7 @@ struct pios_tim_callbacks {
 	void (*edge)(uintptr_t tim_id, uintptr_t context, uint8_t chan_idx, uint16_t count);
 };
 
+void PIOS_TIM_ITConfig(const struct pios_tim_clock_cfg * cfg, uint16_t TIM_IT, FunctionalState NewState);
 int32_t PIOS_TIM_InitClock(const struct pios_tim_clock_cfg * cfg);
 int32_t PIOS_TIM_InitChannels(uintptr_t * tim_id, const struct pios_tim_channel * channels, uint8_t num_channels, const struct pios_tim_callbacks * callbacks, uintptr_t context);
 

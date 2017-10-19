@@ -73,3 +73,4 @@ endif
 * added "pios_can_common.c" to /home/rdu/Workspace/dronin/dRonin/flight/PiOS/Common
 * replaced "pios_can.h" and "pios_can_priv.h" at /home/rdu/Workspace/dronin/dRonin/flight/PiOS/inc
 
+* commented out vsprintf() and snprintf() in /home/rdu/Workspace/dronin/dRonin/flight/PiOS/Common/printf-stdarg.c
