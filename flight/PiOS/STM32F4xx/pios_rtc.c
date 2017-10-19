@@ -33,6 +33,8 @@
 #if defined(PIOS_INCLUDE_RTC)
 #include <pios_rtc_priv.h>
 
+#include "jlink_rtt.h"
+
 #ifndef PIOS_RTC_PRESCALER
 #define PIOS_RTC_PRESCALER 100
 #endif
@@ -52,14 +54,14 @@ void PIOS_RTC_Init(const struct pios_rtc_cfg * cfg)
 	RCC_BackupResetCmd(DISABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
 	PWR_BackupAccessCmd(ENABLE);
-	// Divide external 8 MHz clock to 1 MHz
+	// Divide external clock to 1 MHz
 	RCC_RTCCLKConfig(cfg->clksrc);
 	RCC_RTCCLKCmd(ENABLE);
 
 	RTC_WakeUpCmd(DISABLE);
-	// Divide 1 Mhz clock by 16 -> 62.5 khz
-	RTC_WakeUpClockConfig(RTC_WakeUpClock_RTCCLK_Div16);
-	// Divide 62.5 khz by 200 to get 625 Hz
+	// Divide 1 Mhz clock by 8 -> 125 khz
+	RTC_WakeUpClockConfig(RTC_WakeUpClock_RTCCLK_Div8);
+	// Divide 125 khz by 125 to get 1kHz
 	RTC_SetWakeUpCounter(cfg->prescaler); //cfg->prescaler);
 	RTC_WakeUpCmd(ENABLE);
 	
@@ -75,6 +77,22 @@ void PIOS_RTC_Init(const struct pios_rtc_cfg * cfg)
 	RTC_ITConfig(RTC_IT_WUT, ENABLE);
 	
 	RTC_ClearFlag(RTC_FLAG_WUTF);
+}
+
+#define CVT_ST2MS(n) (((((n) - 1ULL) * 1000ULL) / ((uint64_t)CH_FREQUENCY)) + 1UL)
+
+uint32_t PIOS_RTC_GetSystemTime()
+{
+	// RTC_TimeTypeDef current_time;
+
+	// RTC_GetTime(RTC_Format_BIN, &current_time);
+
+	// JLinkRTTPrintf(0, "RTC System Time (H-M-S): %d, %d, %d \n", current_time.RTC_Hours, current_time.RTC_Minutes, current_time.RTC_Seconds);
+
+	//return CVT_ST2MS(chTimeNow());
+	return chTimeNow();
+	
+	//return (((uint32_t)current_time.RTC_Hours)*60*60 + ((uint32_t)current_time.RTC_Minutes)*60 + ((uint32_t)current_time.RTC_Seconds))*1000 + CVT_ST2MS(chTimeNow());
 }
 
 uint32_t PIOS_RTC_Counter()

@@ -61,9 +61,12 @@ MODULE_HIPRI_INITCALL(CANBridgeInitialize, CANBridgeStart);
  */
 static void canBridgeTask(void *parameters)
 {
+	PIOS_DELAY_WaitmS(1000);
+
     while (1)
 	{
 		CANBridge_UpdateComm();
+		// JLinkRTTPrintf(0, "RTC System Time: %ld \n", PIOS_RTC_GetSystemTime());
         PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
     }
 }

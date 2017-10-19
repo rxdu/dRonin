@@ -22,6 +22,9 @@
         "thread": "c",
         "random": "c",
         "future": "c",
-        "array": "c"
+        "array": "c",
+        "ostream": "cpp",
+        "chrono": "c",
+        "complex": "c"
     }
 }

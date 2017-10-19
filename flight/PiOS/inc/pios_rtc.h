@@ -33,6 +33,7 @@
 
 /* Public Functions */
 extern uint32_t PIOS_RTC_Counter();
+extern uint32_t PIOS_RTC_GetSystemTime();
 extern float PIOS_RTC_Rate();
 extern float PIOS_RTC_MsPerTick();
 extern bool PIOS_RTC_RegisterTickCallback(void (*fn)(uintptr_t id), uintptr_t data);

@@ -109,15 +109,15 @@ static void testTask(void *parameters)
 		PIOS_ANNUNC_Toggle(PIOS_LED_HEARTBEAT);
 		//SEGGER_RTT_WriteString(0, "segger rtt test\n");
 
-		struct pios_can_gimbal_message bgc_message = {
-			.fc_roll = 1,
-			.fc_pitch = 2,
-			.fc_yaw = 3,
-			.setpoint_roll = 2,
-			.setpoint_pitch = 16,
-			.setpoint_yaw = 32};
+		// struct pios_can_gimbal_message bgc_message = {
+		// 	.fc_roll = 1,
+		// 	.fc_pitch = 2,
+		// 	.fc_yaw = 3,
+		// 	.setpoint_roll = 2,
+		// 	.setpoint_pitch = 16,
+		// 	.setpoint_yaw = 32};
 
-		PIOS_CAN_TxData(pios_can_id, PIOS_CAN_GIMBAL, (uint8_t *)&bgc_message);
+		// PIOS_CAN_TxData(pios_can_id, PIOS_CAN_GIMBAL, (uint8_t *)&bgc_message);
 
 		// UAVObjEvent ev;
 		// if (PIOS_Queue_Receive(queue, &ev, CAN_RX_TIMEOUT_MS))
