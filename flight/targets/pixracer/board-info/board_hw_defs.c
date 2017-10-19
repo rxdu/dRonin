@@ -820,8 +820,8 @@ void PIOS_RTC_IRQ_Handler (void);
 void RTC_WKUP_IRQHandler() __attribute__ ((alias ("PIOS_RTC_IRQ_Handler")));
 static const struct pios_rtc_cfg pios_rtc_main_cfg = {
 	.clksrc = RCC_RTCCLKSource_HSE_Div24, // Divide 24 Mhz crystal down to 1
-	// This clock is then divided by another 8 to give a nominal 125 khz clock
-	.prescaler = 125, // Every 125 cycles gives 1kHz
+	// This clock is then divided by another 8 to give a nominal 62.5 khz clock
+	.prescaler = 100, // Every 100 cycles gives 625Hz
 	.irq = {
 		.init = {
 			.NVIC_IRQChannel                   = RTC_WKUP_IRQn,
@@ -867,6 +867,15 @@ static const TIM_TimeBaseInitTypeDef tim_1_8_time_base = {
 	.TIM_Period = 0xFFFF,
 	.TIM_RepetitionCounter = 0x0000,
 };
+
+static const TIM_TimeBaseInitTypeDef tim_5_time_base = {
+	.TIM_Prescaler = (PIOS_PERIPHERAL_APB2_COUNTER_CLOCK / 1000000) - 1,
+	.TIM_ClockDivision = TIM_CKD_DIV1,
+	.TIM_CounterMode = TIM_CounterMode_Up,
+	.TIM_Period = 0xFFFF,
+	.TIM_RepetitionCounter = 0x0000,
+};
+
 
 //Timers used for inputs (3, 8)
 static const struct pios_tim_clock_cfg tim_3_cfg = {
@@ -938,6 +947,19 @@ static const struct pios_tim_clock_cfg tim_4_cfg = {
 	},
 };
 
+// Timers used for UAVCAN clock
+static const struct pios_tim_clock_cfg tim_5_cfg = {
+	.timer = TIM5,
+	.time_base_init = &tim_5_time_base,
+	.irq = {
+		.init = {
+			.NVIC_IRQChannel                   = TIM5_IRQn,
+			.NVIC_IRQChannelPreemptionPriority = PIOS_IRQ_PRIO_MID,
+			.NVIC_IRQChannelSubPriority        = 0,
+			.NVIC_IRQChannelCmd                = ENABLE,
+		},
+	},
+};
 
 /*
  * 	PPM INPUTS

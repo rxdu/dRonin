@@ -2,7 +2,7 @@
 
 extern "C" {
     #include "jlink_rtt.h"
-    uint32_t PIOS_RTC_GetSystemTime();        
+    uint64_t PIOS_UAVCAN_TIM_GetMonoTime();
 }
 
 using namespace uavcan;
@@ -10,8 +10,8 @@ using namespace pios_uavcan;
 
 uavcan::MonotonicTime PIOSUAVCANClock::getMonotonic() const 
 { 
-    JLinkRTTPrintf(0, "RTC Counter: %ld\n", PIOS_RTC_GetSystemTime());
-    return uavcan::MonotonicTime::fromUSec(PIOS_RTC_GetSystemTime()); 
+    // JLinkRTTPrintf(0, "getMonotonic: %ld\n", PIOS_UAVCAN_TIM_GetMonoTime());
+    return uavcan::MonotonicTime::fromUSec(PIOS_UAVCAN_TIM_GetMonoTime()); 
 }
 
 uavcan::UtcTime PIOSUAVCANClock::getUtc() const 

@@ -123,6 +123,10 @@ void PIOS_Board_Init(void)
 	// Timers used for outputs
 	PIOS_TIM_InitClock(&tim_1_cfg);
 	PIOS_TIM_InitClock(&tim_4_cfg);
+#ifdef PIOS_INCLUDE_UAVCAN 
+	// Timer for UAVCAN clock
+	PIOS_TIM_InitClock(&tim_5_cfg);
+#endif
 
 	/* ----------------------------------------------------------------- */
 	/*							Control Input							 */

@@ -65,8 +65,7 @@ static void canBridgeTask(void *parameters)
 
     while (1)
 	{
-		CANBridge_UpdateComm();
-		// JLinkRTTPrintf(0, "RTC System Time: %ld \n", PIOS_RTC_GetSystemTime());
+		// CANBridge_UpdateComm();
         PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
     }
 }

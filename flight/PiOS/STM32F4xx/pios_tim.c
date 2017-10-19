@@ -35,6 +35,10 @@
 #include "pios_tim.h"
 #include "pios_tim_priv.h"
 
+#include "jlink_rtt.h"
+
+volatile static uint64_t time_mono = 0;
+
 enum pios_tim_dev_magic {
 	PIOS_TIM_DEV_MAGIC = 0x87654098,
 };
@@ -186,7 +190,7 @@ static void PIOS_TIM_generic_irq_handler(TIM_TypeDef * timer)
 			overflow_count = 0;
 			overflow_event = false;
 		}
-
+		
 		for (uint8_t j = 0; j < tim_dev->num_channels; j++) {
 			const struct pios_tim_channel * chan = &tim_dev->channels[j];
 
@@ -308,6 +312,40 @@ static void PIOS_TIM_generic_irq_handler(TIM_TypeDef * timer)
 	}
 }
 
+uint64_t PIOS_UAVCAN_TIM_GetMonoTime()
+{
+	uint64_t usec = 0;
+	volatile uint64_t time = time_mono;
+	
+	uint32_t cnt = TIM2->CNT;
+	if (TIM_GetITStatus(TIM2, TIM_IT_Update) == SET)
+	{
+		cnt = TIM2->CNT;
+		time += TIM2->ARR;
+	}
+	usec = time + cnt;
+
+	// JLinkRTTPrintf(0, "USEC: %ld, ARR: %ld\n", usec, TIM2->ARR);
+
+	return usec;
+}
+
+static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
+{
+	/* Check for an overflow event on this timer */
+	uint16_t overflow_count;
+	if (TIM_GetITStatus(timer, TIM_IT_Update) == SET) {
+		TIM_ClearITPendingBit(timer, TIM_IT_Update);
+		overflow_count = timer->ARR;
+	} else {
+		overflow_count = 0;
+	}
+
+	time_mono += overflow_count;
+	
+	JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
+}
+
 /* Bind Interrupt Handlers
  *
  * Map all valid TIM IRQs to the common interrupt handler
@@ -368,7 +406,7 @@ void TIM2_IRQHandler(void) __attribute__ ((alias ("PIOS_TIM_2_irq_handler")));
 static void PIOS_TIM_2_irq_handler (void)
 {
 	PIOS_IRQ_Prologue();
-	PIOS_TIM_generic_irq_handler (TIM2);
+	PIOS_TIM_generic_irq_handler (TIM2);	
 	PIOS_IRQ_Epilogue();
 }
 #endif
@@ -395,7 +433,8 @@ void TIM5_IRQHandler(void) __attribute__ ((alias ("PIOS_TIM_5_irq_handler")));
 static void PIOS_TIM_5_irq_handler (void)
 {
 	PIOS_IRQ_Prologue();
-	PIOS_TIM_generic_irq_handler (TIM5);
+	// PIOS_TIM_generic_irq_handler (TIM5);
+	PIOS_UAVCAN_TIM_irq_handler(TIM5);
 	PIOS_IRQ_Epilogue();
 }
 
