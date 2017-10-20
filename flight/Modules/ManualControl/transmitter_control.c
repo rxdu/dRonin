@@ -379,7 +379,7 @@ int32_t transmitter_control_update()
 		// These values are not used but just put ManualControlCommand in a sane state.  When
 		// Connected is false, then the failsafe submodule will be in control.
 
-		cmd.Throttle = -1;
+		cmd.Throttle = 0;
 		cmd.Roll = 0;
 		cmd.Yaw = 0;
 		cmd.Pitch = 0;
@@ -996,8 +996,8 @@ static void update_navigation_desired(CarManualControlCommandData * manual_contr
 	actuator.Pitch = manual_control_command->Pitch;
 	actuator.Yaw = manual_control_command->Yaw;
 	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
-	actuator.Steering = 0.5;
-	actuator.Throttle = -1;
+	actuator.Steering = 0;
+	actuator.Throttle = 0;
 
 	CarActuatorDesiredSet(&actuator);
 }

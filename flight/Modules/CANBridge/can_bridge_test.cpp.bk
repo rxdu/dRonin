@@ -92,13 +92,13 @@ void CANBridge::updateComm()
     /*
      * Publishing the message.
      */
-    // const int pub_res = kv_pub_.broadcast(kv_msg);
-    // if (pub_res < 0)
-    // {
-    //     SEGGER_RTT_WriteString(0, "KV publication failure\n");
-    // }    
-    // else
-    // {
-    //     SEGGER_RTT_WriteString(0, "CAN msg sent successfully\n");
-    // }
+    const int pub_res = kv_pub_.broadcast(kv_msg);
+    if (pub_res < 0)
+    {
+        SEGGER_RTT_WriteString(0, "KV publication failure\n");
+    }    
+    else
+    {
+        SEGGER_RTT_WriteString(0, "CAN msg sent successfully\n");
+    }
 }

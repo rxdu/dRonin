@@ -186,7 +186,7 @@ static void post_process_scale_and_commit(float *actuator_vect,
 		// Motors have additional protection for when to be on
 		if (get_mixer_type(ct) == CARMIXERSETTINGS_MIXER1TYPE_MOTOR) {
 			if (!armed) {
-				actuator_vect[ct] = -1;  //force min throttle
+				actuator_vect[ct] = 0;  //force min throttle
 			} 
 			else {
 				actuator_vect[ct] = actuator_vect[ct] * gain + offset;
@@ -213,7 +213,7 @@ static void post_process_scale_and_commit(float *actuator_vect,
 		CarActuatorCommandGet(&command);
 	}
 
-	// JLinkRTTPrintf(0, "Actuator command servo-motor: %ld, %ld\n", (uint32_t)command.Channel[0], (uint32_t)command.Channel[1]);
+	JLinkRTTPrintf(0, "Actuator command servo-motor: %ld, %ld\n", (uint32_t)command.Channel[0], (uint32_t)command.Channel[1]);
 
 	for (int n = 0; n < MAX_MIX_ACTUATORS; ++n) {
 		PIOS_Servo_Set(n, command.Channel[n]);
@@ -232,8 +232,8 @@ static void process_input_data(uint32_t this_systime,
 		driving_status_updated = false;
 	}
 
-	float steering_val = -1;
-	float throttle_val = -1;	
+	float steering_val = 0;
+	float throttle_val = 0;	
 	
 	CarActuatorDesiredData desired;
 	CarActuatorDesiredGet(&desired);
@@ -244,7 +244,7 @@ static void process_input_data(uint32_t this_systime,
 	*armed = drivingStatus.Armed == DRIVINGSTATUS_ARMED_ARMED;
 
 	if (!*armed) {
-		throttle_val = -1;
+		throttle_val = 0;
 	}
 
 	*stabilize_now = throttle_val > 0.0f;
@@ -484,7 +484,7 @@ static float channel_failsafe_value(int idx)
 	case CARMIXERSETTINGS_MIXER1TYPE_SERVO:
 		return actuatorSettings.ChannelNeutral[idx];
 	case CARMIXERSETTINGS_MIXER1TYPE_DISABLED:
-		return -1;
+		return 0;
 	default:
 		// TODO: is this actually right/safe?
 		return 0;
@@ -513,7 +513,7 @@ static void set_failsafe()
 		PIOS_Servo_Set(n, fs_val);
 	}
 
-	// JLinkRTTPrintf(0, "Failsafe command servo-motor: %ld, %ld\n", (uint32_t)Channel[0], (uint32_t)Channel[1]);
+	JLinkRTTPrintf(0, "Failsafe command servo-motor: %ld, %ld\n", (uint32_t)Channel[0], (uint32_t)Channel[1]);
 
 	PIOS_Servo_Update();
 
