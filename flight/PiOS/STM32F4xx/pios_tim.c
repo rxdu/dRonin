@@ -100,14 +100,41 @@ int32_t PIOS_TIM_InitClock(const struct pios_tim_clock_cfg * cfg)
 	return 0;
 }
 
-void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * cfg)
+void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const struct pios_hall_cfg * hall_cfg)
 {
+	/* Config GPIO */
+	for (int i = 0; i < hall_cfg->num_channels; i++) {
+		const struct pios_tim_channel * chan = &hall_cfg->channels[i];
+		GPIO_Init(chan->pin.gpio, (GPIO_InitTypeDef*)&chan->pin.init);	
+		PIOS_DEBUG_Assert(chan->remap);
+		GPIO_PinAFConfig(chan->pin.gpio, chan->pin.pin_source, chan->remap);
+	}
+
+	/* Enable hall sensor interface */
+	TIM_SelectHallSensor(tim_cfg->timer, ENABLE);	
+
+	/* Select slave input trigger */
+	TIM_SelectInputTrigger(tim_cfg->timer,TIM_TS_TI1F_ED);
+	TIM_SelectSlaveMode(tim_cfg->timer, TIM_SlaveMode_Reset);
+
+	/* Config input capture channel */
+	const struct pios_tim_channel * ic_chan = &hall_cfg->channels[2];
+	
+	TIM_ICInitTypeDef TIM_ICInitStructure = hall_cfg->tim_ic_init;
+	TIM_ICInitStructure.TIM_Channel = ic_chan->timer_chan;
+	TIM_ICInit(ic_chan->timer, &TIM_ICInitStructure);
+
+	/* Enable the Capture Compare Interrupt Request */
+	TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Update, ENABLE);
+
 	/* Config timer base */
-	PIOS_TIM_InitClock(cfg);
+	PIOS_TIM_InitClock(tim_cfg);
 
-	/* Config timer input capture */
-
-	/* Enable interrupts */
+	/* Setup local variable which stays in this scope */
+	/* Doing this here and using a local variable saves doing it in the ISR */
+	TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
+	TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
+	TIM_ICInitStructure.TIM_ICFilter = 0x0;
 }
 
 void PIOS_TIM_InitTimerPin(uintptr_t tim_id, int idx)
@@ -361,6 +388,45 @@ static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
 	// JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
 }
 
+static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
+{
+	/* Check for an overflow event on this timer */
+	bool overflow_event;
+	uint16_t overflow_count;
+	if (TIM_GetITStatus(timer, TIM_IT_Update) == SET) {
+		TIM_ClearITPendingBit(timer, TIM_IT_Update);
+		overflow_count = timer->ARR;
+		overflow_event = true;
+	} else {
+		overflow_count = 0;
+		overflow_event = false;
+	}
+		
+	/* Figure out which interrupt bit we should be looking at */
+	uint16_t timer_it;
+	timer_it = TIM_IT_CC1;
+
+	bool edge_event;
+	uint16_t edge_count;
+	if (TIM_GetITStatus(timer, timer_it) == SET) {
+		TIM_ClearITPendingBit(timer, timer_it);
+		/* Read the current counter */
+		edge_count = TIM_GetCapture1(timer);
+		edge_event = true;
+	} else {
+		edge_event = false;
+		edge_count = 0;
+	}
+
+	(void)overflow_event;
+	(void)overflow_count;
+	(void)edge_event;
+	(void)edge_count;
+
+	JLinkRTTPrintf(0, "Timer 1 ISR triggered, edge count: %ld\n", edge_count);
+}
+
+
 /* Bind Interrupt Handlers
  *
  * Map all valid TIM IRQs to the common interrupt handler
@@ -370,7 +436,8 @@ void TIM1_CC_IRQHandler(void) __attribute__ ((alias ("PIOS_TIM_1_CC_irq_handler"
 static void PIOS_TIM_1_CC_irq_handler (void)
 {
 	PIOS_IRQ_Prologue();
-	PIOS_TIM_generic_irq_handler (TIM1);
+	// PIOS_TIM_generic_irq_handler (TIM1);
+	PIOS_HALLSENSOR_TIM_irq_handler(TIM1);
 	PIOS_IRQ_Epilogue();
 }
 
