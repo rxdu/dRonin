@@ -100,6 +100,16 @@ int32_t PIOS_TIM_InitClock(const struct pios_tim_clock_cfg * cfg)
 	return 0;
 }
 
+void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * cfg)
+{
+	/* Config timer base */
+	PIOS_TIM_InitClock(cfg);
+
+	/* Config timer input capture */
+
+	/* Enable interrupts */
+}
+
 void PIOS_TIM_InitTimerPin(uintptr_t tim_id, int idx)
 {
 	struct pios_tim_dev * tim_dev = (struct pios_tim_dev *) tim_id;
