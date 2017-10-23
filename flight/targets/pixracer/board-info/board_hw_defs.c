@@ -939,6 +939,22 @@ static const struct pios_tim_clock_cfg tim_1_cfg = {
 			.NVIC_IRQChannelCmd                = ENABLE,
 		},
 	},
+	.irq3 = {
+		.init = {
+			.NVIC_IRQChannel                   = TIM1_TRG_COM_TIM11_IRQn,
+			.NVIC_IRQChannelPreemptionPriority = PIOS_IRQ_PRIO_MID,
+			.NVIC_IRQChannelSubPriority        = 0,
+			.NVIC_IRQChannelCmd                = ENABLE,
+		},
+	},
+	.irq4 = {
+		.init = {
+			.NVIC_IRQChannel                   = TIM1_BRK_TIM9_IRQn,
+			.NVIC_IRQChannelPreemptionPriority = PIOS_IRQ_PRIO_MID,
+			.NVIC_IRQChannelSubPriority        = 0,
+			.NVIC_IRQChannelCmd                = ENABLE,
+		},
+	},
 };
 
 static const struct pios_tim_clock_cfg tim_4_cfg = {

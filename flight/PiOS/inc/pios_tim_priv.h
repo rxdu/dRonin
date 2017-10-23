@@ -8,6 +8,8 @@ struct pios_tim_clock_cfg {
 	const TIM_TimeBaseInitTypeDef * time_base_init;
 	struct stm32_irq irq;
 	struct stm32_irq irq2;
+	struct stm32_irq irq3;
+	struct stm32_irq irq4;
 };
 
 struct pios_tim_channel {

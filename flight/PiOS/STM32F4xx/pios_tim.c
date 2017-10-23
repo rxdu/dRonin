@@ -96,6 +96,12 @@ int32_t PIOS_TIM_InitClock(const struct pios_tim_clock_cfg * cfg)
 	 */
 	if (cfg->irq2.init.NVIC_IRQChannel != 0)
 		NVIC_Init((NVIC_InitTypeDef*)&cfg->irq2.init);
+	
+	if (cfg->irq3.init.NVIC_IRQChannel != 0)
+		NVIC_Init((NVIC_InitTypeDef*)&cfg->irq3.init);
+
+	if (cfg->irq4.init.NVIC_IRQChannel != 0)
+		NVIC_Init((NVIC_InitTypeDef*)&cfg->irq4.init);
 
 	return 0;
 }
@@ -110,12 +116,17 @@ void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const 
 		GPIO_PinAFConfig(chan->pin.gpio, chan->pin.pin_source, chan->remap);
 	}
 
-	/* Enable hall sensor interface */
-	TIM_SelectHallSensor(tim_cfg->timer, ENABLE);	
-
 	/* Select slave input trigger */
 	TIM_SelectInputTrigger(tim_cfg->timer,TIM_TS_TI1F_ED);
 	TIM_SelectSlaveMode(tim_cfg->timer, TIM_SlaveMode_Reset);
+
+	/* Enable hall sensor interface */
+	TIM_SelectHallSensor(tim_cfg->timer, ENABLE);	
+
+	/* Config timer base */
+	PIOS_TIM_InitClock(tim_cfg);
+	/* Disable timer for more configurations */
+	TIM_Cmd(tim_cfg->timer, DISABLE);
 
 	/* Config input capture channel */
 	const struct pios_tim_channel * ic_chan = &hall_cfg->channels[2];
@@ -125,10 +136,11 @@ void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const 
 	TIM_ICInit(ic_chan->timer, &TIM_ICInitStructure);
 
 	/* Enable the Capture Compare Interrupt Request */
-	TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Update, ENABLE);
+	TIM_ITConfig(ic_chan->timer, TIM_IT_CC1, ENABLE);
+	// TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Update, ENABLE);
+	// TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Trigger | TIM_IT_Update, ENABLE);	
 
-	/* Config timer base */
-	PIOS_TIM_InitClock(tim_cfg);
+	TIM_Cmd(tim_cfg->timer, ENABLE);
 
 	/* Setup local variable which stays in this scope */
 	/* Doing this here and using a local variable saves doing it in the ISR */
@@ -388,6 +400,9 @@ static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
 	// JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
 }
 
+static volatile uint16_t hall_ic_prev_val = 0;
+static volatile uint16_t hall_ic_new_val = 0;
+
 static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 {
 	/* Check for an overflow event on this timer */
@@ -402,14 +417,11 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 		overflow_event = false;
 	}
 		
-	/* Figure out which interrupt bit we should be looking at */
-	uint16_t timer_it;
-	timer_it = TIM_IT_CC1;
-
+	/* Check for an edge count event on this timer */
 	bool edge_event;
 	uint16_t edge_count;
-	if (TIM_GetITStatus(timer, timer_it) == SET) {
-		TIM_ClearITPendingBit(timer, timer_it);
+	if (TIM_GetITStatus(timer, TIM_IT_CC1) == SET) {
+		TIM_ClearITPendingBit(timer, TIM_IT_CC1);
 		/* Read the current counter */
 		edge_count = TIM_GetCapture1(timer);
 		edge_event = true;
@@ -418,16 +430,41 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 		edge_count = 0;
 	}
 
+	/* Check for an edge count event on this timer */
+	bool trg_event;
+	if (TIM_GetITStatus(timer, TIM_IT_Trigger) == SET) {
+		/* Read the current counter */
+		TIM_ClearITPendingBit(timer, TIM_IT_Trigger);		
+		trg_event = true;
+	} else {
+		trg_event = false;
+	}
+
 	(void)overflow_event;
 	(void)overflow_count;
 	(void)edge_event;
 	(void)edge_count;
+	(void)trg_event;
 
 	if(overflow_event)
 		JLinkRTTPrintf(0, "Timer 1 overflow ISR triggered\n", edge_count);
 
 	if(edge_event)
-		JLinkRTTPrintf(0, "Timer 1 edge ISR triggered, edge count: %ld\n", edge_count);
+	{
+		uint16_t hall_ic_width = 0;
+		hall_ic_new_val = edge_count;
+		if(hall_ic_new_val > hall_ic_prev_val)
+			hall_ic_width = hall_ic_new_val - hall_ic_prev_val;
+		else
+			hall_ic_width = ((0xffff - hall_ic_prev_val) + hall_ic_new_val);
+	
+		hall_ic_prev_val = hall_ic_new_val;
+	
+		JLinkRTTPrintf(0, "Timer 1 edge ISR triggered, width: %ld\n", hall_ic_width);
+	}
+
+	if(edge_event)
+		JLinkRTTPrintf(0, "Timer 1 trigger ISR triggered\n", 0);
 }
 
 
@@ -481,7 +518,8 @@ static void PIOS_TIM_1_TRG_COM_TIM_11_irq_handler (void)
 	PIOS_IRQ_Prologue();
 
 	if (TIM_GetITStatus(TIM1, TIM_IT_Trigger | TIM_IT_COM)) {
-		PIOS_TIM_generic_irq_handler(TIM1);
+		// PIOS_TIM_generic_irq_handler(TIM1);
+		PIOS_HALLSENSOR_TIM_irq_handler(TIM1);
 	} else if (TIM_GetITStatus(TIM11, TIM_IT_Update | TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4 | TIM_IT_COM | TIM_IT_Trigger | TIM_IT_Break)) {
 		PIOS_TIM_generic_irq_handler (TIM11);
 	}
