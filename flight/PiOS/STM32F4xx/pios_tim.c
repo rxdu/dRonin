@@ -132,9 +132,9 @@ void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const 
 
 	/* Setup local variable which stays in this scope */
 	/* Doing this here and using a local variable saves doing it in the ISR */
-	TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
-	TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
-	TIM_ICInitStructure.TIM_ICFilter = 0x0;
+	// TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
+	// TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
+	// TIM_ICInitStructure.TIM_ICFilter = 0x0;
 }
 
 void PIOS_TIM_InitTimerPin(uintptr_t tim_id, int idx)
@@ -423,7 +423,11 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 	(void)edge_event;
 	(void)edge_count;
 
-	JLinkRTTPrintf(0, "Timer 1 ISR triggered, edge count: %ld\n", edge_count);
+	if(overflow_event)
+		JLinkRTTPrintf(0, "Timer 1 overflow ISR triggered\n", edge_count);
+
+	if(edge_event)
+		JLinkRTTPrintf(0, "Timer 1 edge ISR triggered, edge count: %ld\n", edge_count);
 }
 
 
@@ -448,7 +452,8 @@ static void PIOS_TIM_1_BRK_TIM_9_irq_handler (void)
 	PIOS_IRQ_Prologue();
 
 	if (TIM_GetITStatus(TIM1, TIM_IT_Break)) {
-		PIOS_TIM_generic_irq_handler(TIM1);
+		// PIOS_TIM_generic_irq_handler(TIM1);
+		PIOS_HALLSENSOR_TIM_irq_handler(TIM1);
 	} else if (TIM_GetITStatus(TIM9, TIM_IT_Update | TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4 | TIM_IT_COM | TIM_IT_Trigger | TIM_IT_Break)) {
 		PIOS_TIM_generic_irq_handler (TIM9);
 	}
@@ -462,7 +467,8 @@ static void PIOS_TIM_1_UP_TIM_10_irq_handler (void)
 	PIOS_IRQ_Prologue();
 
 	if (TIM_GetITStatus(TIM1, TIM_IT_Update)) {
-		PIOS_TIM_generic_irq_handler(TIM1);
+		// PIOS_TIM_generic_irq_handler(TIM1);
+		PIOS_HALLSENSOR_TIM_irq_handler(TIM1);
 	} else if (TIM_GetITStatus(TIM10, TIM_IT_Update | TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4 | TIM_IT_COM | TIM_IT_Trigger | TIM_IT_Break)) {
 		PIOS_TIM_generic_irq_handler (TIM10);
 	}
