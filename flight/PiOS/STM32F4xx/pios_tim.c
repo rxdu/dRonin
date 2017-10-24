@@ -108,6 +108,11 @@ int32_t PIOS_TIM_InitClock(const struct pios_tim_clock_cfg * cfg)
 
 void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const struct pios_hall_cfg * hall_cfg)
 {
+	/* Config timer base */
+	PIOS_TIM_InitClock(tim_cfg);
+	/* Disable timer for more configurations */
+	TIM_Cmd(tim_cfg->timer, DISABLE);
+
 	/* Config GPIO */
 	for (int i = 0; i < hall_cfg->num_channels; i++) {
 		const struct pios_tim_channel * chan = &hall_cfg->channels[i];
@@ -116,17 +121,12 @@ void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const 
 		GPIO_PinAFConfig(chan->pin.gpio, chan->pin.pin_source, chan->remap);
 	}
 
-	/* Select slave input trigger */
-	TIM_SelectInputTrigger(tim_cfg->timer,TIM_TS_TI1F_ED);
-	TIM_SelectSlaveMode(tim_cfg->timer, TIM_SlaveMode_Reset);
-
 	/* Enable hall sensor interface */
 	TIM_SelectHallSensor(tim_cfg->timer, ENABLE);	
 
-	/* Config timer base */
-	PIOS_TIM_InitClock(tim_cfg);
-	/* Disable timer for more configurations */
-	TIM_Cmd(tim_cfg->timer, DISABLE);
+	/* Select slave input trigger */
+	TIM_SelectInputTrigger(tim_cfg->timer,TIM_TS_TI1F_ED);
+	TIM_SelectSlaveMode(tim_cfg->timer, TIM_SlaveMode_Reset);
 
 	/* Config input capture channel */
 	const struct pios_tim_channel * ic_chan = &hall_cfg->channels[2];
@@ -136,9 +136,22 @@ void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const 
 	TIM_ICInit(ic_chan->timer, &TIM_ICInitStructure);
 
 	/* Enable the Capture Compare Interrupt Request */
-	TIM_ITConfig(ic_chan->timer, TIM_IT_CC1, ENABLE);
+	TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Trigger, ENABLE);
+	// TIM_ITConfig(ic_chan->timer, TIM_IT_CC1, ENABLE);
 	// TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Update, ENABLE);
 	// TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Trigger | TIM_IT_Update, ENABLE);	
+
+	// TIM_ICInitTypeDef TIM_ICInitStructure;
+	// TIM_ICStructInit(&TIM_ICInitStructure);
+	
+	// TIM_ICInitStructure.TIM_Channel = TIM_Channel_1;
+	// TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_BothEdge;
+	// TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_TRC;
+	// TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
+	// TIM_ICInitStructure.TIM_ICFilter = 0;
+	// TIM_ITConfig(TIM1, TIM_IT_Trigger, ENABLE);
+	
+	// TIM_ICInit(TIM1, &TIM_ICInitStructure);
 
 	TIM_Cmd(tim_cfg->timer, ENABLE);
 
@@ -400,11 +413,24 @@ static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
 	// JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
 }
 
-static volatile uint16_t hall_ic_prev_val = 0;
-static volatile uint16_t hall_ic_new_val = 0;
+// static volatile uint16_t hall_ic_prev_val = 0;
+// static volatile uint16_t hall_ic_new_val = 0;
 
 static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 {
+	/* Check for a trigger event on this timer */
+	bool trg_event;
+	uint16_t trg_count;
+	if (TIM_GetITStatus(timer, TIM_IT_Trigger) == SET) {
+		/* Read the current counter */
+		TIM_ClearITPendingBit(timer, TIM_IT_Trigger);		
+		trg_event = true;
+		trg_count = timer->CNT;
+	} else {
+		trg_event = false;
+		trg_count = 0;
+	}
+
 	/* Check for an overflow event on this timer */
 	bool overflow_event;
 	uint16_t overflow_count;
@@ -430,37 +456,28 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 		edge_count = 0;
 	}
 
-	/* Check for an edge count event on this timer */
-	bool trg_event;
-	if (TIM_GetITStatus(timer, TIM_IT_Trigger) == SET) {
-		/* Read the current counter */
-		TIM_ClearITPendingBit(timer, TIM_IT_Trigger);		
-		trg_event = true;
-	} else {
-		trg_event = false;
-	}
-
 	(void)overflow_event;
 	(void)overflow_count;
 	(void)edge_event;
 	(void)edge_count;
 	(void)trg_event;
+	(void)trg_count;
 
 	if(overflow_event)
 		JLinkRTTPrintf(0, "Timer 1 overflow ISR triggered\n", edge_count);
 
 	if(edge_event)
 	{
-		uint16_t hall_ic_width = 0;
-		hall_ic_new_val = edge_count;
-		if(hall_ic_new_val > hall_ic_prev_val)
-			hall_ic_width = hall_ic_new_val - hall_ic_prev_val;
-		else
-			hall_ic_width = ((0xffff - hall_ic_prev_val) + hall_ic_new_val);
+		// uint16_t hall_ic_width = 0;
+		// hall_ic_new_val = edge_count;
+		// if(hall_ic_new_val > hall_ic_prev_val)
+		// 	hall_ic_width = hall_ic_new_val - hall_ic_prev_val;
+		// else
+		// 	hall_ic_width = ((0xffff - hall_ic_prev_val) + hall_ic_new_val);
 	
-		hall_ic_prev_val = hall_ic_new_val;
+		// hall_ic_prev_val = hall_ic_new_val;
 	
-		JLinkRTTPrintf(0, "Timer 1 edge ISR triggered, width: %ld\n", hall_ic_width);
+		JLinkRTTPrintf(0, "Timer 1 edge ISR triggered, raw: %ld\n", edge_count);
 	}
 
 	if(edge_event)

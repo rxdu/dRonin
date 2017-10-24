@@ -1044,7 +1044,7 @@ static const struct pios_tim_channel pios_tim_hall_if_channels[] = {
 	},
 };
 
-// RC Input on Pixracer: 
+// Hall sensor interface: 
 static const struct pios_hall_cfg pios_hall_input_cfg = {
 	.tim_ic_init = {
 		.TIM_ICPolarity = TIM_ICPolarity_BothEdge,
