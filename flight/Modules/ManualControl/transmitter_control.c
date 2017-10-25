@@ -141,7 +141,6 @@ int rssitype_to_channelgroup() {
 int32_t transmitter_control_initialize()
 {
 	if (CarManualControlCommandInitialize() == -1
-			// || CarActuatorDesiredInitialize() == -1
 			|| CarManualControlSettingsInitialize() == -1
 			|| DrivingStatusInitialize() == -1 
 			|| ReceiverActivityInitialize() == -1) {
@@ -401,7 +400,6 @@ int32_t transmitter_control_update()
 
 	} else if (valid_input_detected) {
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_NONE);
-		//JLinkWriteString(0, "SYSTEMALARMS_MANUALCONTROL_NONE");
 
 		// Scale channels to -1 -> +1 range
 		cmd.Roll           = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL];
@@ -671,19 +669,15 @@ static void process_transmitter_events(CarManualControlCommandData * cmd, CarMan
 
 	bool low_throt = cmd->Throttle <= 0;
 
-	// if (low_throt) {
-	// 	/* Determine whether to disarm when throttle is low */
-	// 	uint8_t drv_mode;
-	// 	DrivingStatusDrivingModeGet(&drv_mode);
+	if (low_throt) {
+		/* Determine whether to disarm when throttle is low */
+		uint8_t drv_mode;
+		DrivingStatusDrivingModeGet(&drv_mode);
 
-	// 	if (drv_mode == DRIVINGSTATUS_DRIVINGMODE_POSITIONHOLD ||
-	// 		drv_mode == DRIVINGSTATUS_DRIVINGMODE_RETURNTOHOME ||
-	// 		drv_mode == DRIVINGSTATUS_DRIVINGMODE_PATHPLANNER  ||
-	// 		drv_mode == DRIVINGSTATUS_DRIVINGMODE_ALTITUDEHOLD ||
-	// 		drv_mode == DRIVINGSTATUS_DRIVINGMODE_TABLETCONTROL) {
-	// 		low_throt = false;
-	// 	}
-	// }
+		if (drv_mode == DRIVINGSTATUS_DRIVINGMODE_NAVIGATION1) {
+			low_throt = false;
+		}
+	}
 
 	if (low_throt) {
 		if (check_receiver_timer(settings->ArmedTimeout)) {

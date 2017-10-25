@@ -41,6 +41,7 @@
 #include "pios_rcvr.h"
 
 #include "control.h"
+#include "failsafe_control.h"
 #include "transmitter_control.h"
 
 #include "drivingstatus.h"
@@ -156,7 +157,11 @@ static void manualControlTask(void *parameters)
 			break;
 		}
 
-		(void)ret;
+		if (ret) {
+			failsafe_control_select(last_control_selection !=
+					DRIVINGSTATUS_CONTROLSOURCE_FAILSAFE);
+			control_selection = DRIVINGSTATUS_CONTROLSOURCE_FAILSAFE;
+		}
 
 		if (control_selection != last_control_selection) {
 			DrivingStatusControlSourceSet(&control_selection);

@@ -25,6 +25,7 @@
         "array": "c",
         "ostream": "cpp",
         "chrono": "c",
-        "complex": "c"
+        "complex": "c",
+        "stabilizationdesired.h": "c"
     }
 }
