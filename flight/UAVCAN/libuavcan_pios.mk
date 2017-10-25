@@ -23,7 +23,6 @@ CPPSRC  += $(LIBUAVCAN_SRC)
 CPPSRC  += $(PIOSUAVCAN_SRC)
 
 EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include
-EXTRAINCDIRS += $(LIBUAVCAN_DIR)/include/dsdlc_generated
 EXTRAINCDIRS += $(PIOS_DRIVER_DIR) 
 
 CPPFLAGS += -DUAVCAN_CPP_VERSION=UAVCAN_CPP11 -std=c++11 -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit
@@ -31,13 +30,19 @@ CPPFLAGS += -DUAVCAN_CPP_VERSION=UAVCAN_CPP11 -std=c++11 -fno-rtti -fno-threadsa
 #
 # DSDL compiler executable
 #
-#LIBUAVCAN_DSDLC := $(LIBUAVCAN_DIR)/dsdl_compiler/libuavcan_dsdlc
+LIBUAVCAN_DSDLC := $(LIBUAVCAN_DIR)/dsdl_compiler/libuavcan_dsdlc
 
 #
 # Standard DSDL definitions
 #
-#UAVCAN_DSDL_DIR := $(UAVCAN_DIR)/dsdl/uavcan
+UAVCAN_DSDL_DIR := $(PIOS_UAVCAN_LIB)/dsdl/uavcan
+UAVCAN_PIXCAR_DIR := $(PIOS_UAVCAN_LIB)/pixcar
 
+# Invoke DSDL compiler and add its default output directory to the include search path
+UAVCAN_TYPES_INC := $(PIOS_UAVCAN_LIB)/uavcantypes
+$(info $(shell $(LIBUAVCAN_DSDLC) -O $(UAVCAN_TYPES_INC) $(UAVCAN_DSDL_DIR)))
+$(info $(shell $(LIBUAVCAN_DSDLC) -O $(UAVCAN_TYPES_INC) $(UAVCAN_PIXCAR_DIR)))
+EXTRAINCDIRS += $(UAVCAN_TYPES_INC)
 
 #
 # PIOS device library source and includes
