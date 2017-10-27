@@ -35,12 +35,12 @@ include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
 DEBUG ?= NO
 
 # List of modules to include
-MODULES = TestTask
+MODULES = RTT
+# MODULES = TestTask
 #MODULES += CarSensors
 #MODULES += CarActuator
 #MODULES += CarControl
-MODULES += RTT
-#MODULES += Sensors
+MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl

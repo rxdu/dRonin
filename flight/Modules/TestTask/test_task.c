@@ -106,7 +106,7 @@ static void testTask(void *parameters)
 {
 	while (1)
 	{
-		PIOS_ANNUNC_Toggle(PIOS_LED_HEARTBEAT);
+		// PIOS_ANNUNC_Toggle(PIOS_LED_ALARM);
 		//SEGGER_RTT_WriteString(0, "segger rtt test\n");
 
 		// struct pios_can_gimbal_message bgc_message = {

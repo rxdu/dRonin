@@ -58,6 +58,7 @@
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGHEST
 #define UPDATE_PERIOD_MS 20
+#define CTRL_HEARTBEAT_MULTIPLIER	25	/* perios = CTRL_HEARTBEAT_MULTIPLIER * UPDATE_PERIOD_MS */
 
 // Private variables
 static struct pios_thread *taskHandle;
@@ -67,6 +68,7 @@ static void manualControlTask(void *parameters);
 static DrivingStatusControlSourceOptions control_source_select();
 
 bool vehicle_is_armed = false;
+static uint32_t control_status_led = 0;
 
 // This is exposed to transmitter_control
 bool ok_to_arm(void);
@@ -77,7 +79,7 @@ bool ok_to_arm(void);
 int32_t ManualControlStart()
 {
 	// Watchdog must be registered before starting task
-	// PIOS_WDG_RegisterFlag(PIOS_WDG_MANUAL);
+	PIOS_WDG_RegisterFlag(PIOS_WDG_MANUAL);
 
 	// Start main task
 	taskHandle = PIOS_Thread_Create(manualControlTask, "Control", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);
@@ -316,7 +318,10 @@ static void manualControlTask(void *parameters)
 
 		// Wait until next update
 		PIOS_RCVR_WaitActivity(UPDATE_PERIOD_MS);
-		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
+		PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
+
+		if((control_status_led++)%CTRL_HEARTBEAT_MULTIPLIER == 0)
+			PIOS_ANNUNC_Toggle(PIOS_LED_HEARTBEAT);
 	}
 }
 
