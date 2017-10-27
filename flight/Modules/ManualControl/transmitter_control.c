@@ -667,17 +667,19 @@ static void process_transmitter_events(CarManualControlCommandData * cmd, CarMan
 		return;
 	}
 
-	bool low_throt = cmd->Throttle <= 0;
+	// bool low_throt = cmd->Throttle <= 0;
 
-	if (low_throt) {
-		/* Determine whether to disarm when throttle is low */
-		uint8_t drv_mode;
-		DrivingStatusDrivingModeGet(&drv_mode);
+	// if (low_throt) {
+	// 	/* Determine whether to disarm when throttle is low */
+	// 	uint8_t drv_mode;
+	// 	DrivingStatusDrivingModeGet(&drv_mode);
 
-		if (drv_mode == DRIVINGSTATUS_DRIVINGMODE_NAVIGATION1) {
-			low_throt = false;
-		}
-	}
+	// 	if (drv_mode == DRIVINGSTATUS_DRIVINGMODE_NAVIGATION1) {
+	// 		low_throt = false;
+	// 	}
+	// }
+	// Do not disarm due to low throttle
+	bool low_throt = false;
 
 	if (low_throt) {
 		if (check_receiver_timer(settings->ArmedTimeout)) {

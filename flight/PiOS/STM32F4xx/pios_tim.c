@@ -444,20 +444,26 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 		edge_count = 0;
 	}
 
-	if(overflow_event)
-	{
-		JLinkRTTPrintf(0, "Timer 1 overflow ISR triggered\n", overflow_count);
-	}
+	(void)trg_event;
+	(void)overflow_event;
+	(void)edge_event;
+	(void)overflow_count;
+	(void)hall_sensor_reading;
+	(void)edge_count;
+	// if(overflow_event)
+	// {
+	// 	JLinkRTTPrintf(0, "Timer 1 overflow ISR triggered\n", overflow_count);
+	// }
 
-	if(edge_event)
-	{	
-		JLinkRTTPrintf(0, "Timer 1 edge ISR triggered, raw: %ld\n", edge_count);
-	}
+	// if(edge_event)
+	// {	
+	// 	JLinkRTTPrintf(0, "Timer 1 edge ISR triggered, raw: %ld\n", edge_count);
+	// }
 
-	if(trg_event)
-	{		
-		JLinkRTTPrintf(0, "Timer 1 trigger ISR triggered, hall sensor reading: %ld\n", hall_sensor_reading);
-	}
+	// if(trg_event)
+	// {		
+	// 	JLinkRTTPrintf(0, "Timer 1 trigger ISR triggered, hall sensor reading: %ld\n", hall_sensor_reading);
+	// }
 }
 
 

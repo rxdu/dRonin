@@ -68,7 +68,7 @@ static void manualControlTask(void *parameters);
 static DrivingStatusControlSourceOptions control_source_select();
 
 bool vehicle_is_armed = false;
-static uint32_t control_status_led = 0;
+// static uint32_t control_status_led = 0;
 
 // This is exposed to transmitter_control
 bool ok_to_arm(void);
@@ -320,8 +320,8 @@ static void manualControlTask(void *parameters)
 		PIOS_RCVR_WaitActivity(UPDATE_PERIOD_MS);
 		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 
-		if((control_status_led++)%CTRL_HEARTBEAT_MULTIPLIER == 0)
-			PIOS_ANNUNC_Toggle(PIOS_LED_HEARTBEAT);
+		// if((control_status_led++)%CTRL_HEARTBEAT_MULTIPLIER == 0)
+		// 	PIOS_ANNUNC_Toggle(PIOS_LED_HEARTBEAT);
 	}
 }
 

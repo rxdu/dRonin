@@ -37,9 +37,6 @@ DEBUG ?= NO
 # List of modules to include
 MODULES = RTT
 # MODULES = TestTask
-#MODULES += CarSensors
-#MODULES += CarActuator
-#MODULES += CarControl
 MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator

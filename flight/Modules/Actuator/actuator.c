@@ -76,6 +76,8 @@
 #define MAX_MIX_ACTUATORS CARACTUATORCOMMAND_CHANNEL_NUMELEM
 #endif
 
+#define SERVO_NEUTRAL_POS 1460
+
 DONT_BUILD_IF(CARACTUATORSETTINGS_TIMERUPDATEFREQ_NUMELEM > PIOS_SERVO_MAX_BANKS, TooManyServoBanks);
 DONT_BUILD_IF(MAX_MIX_ACTUATORS > CARACTUATORCOMMAND_CHANNEL_NUMELEM, TooManyMixers);
 
@@ -213,7 +215,7 @@ static void post_process_scale_and_commit(float *actuator_vect,
 		CarActuatorCommandGet(&command);
 	}
 
-	// JLinkRTTPrintf(0, "Actuator command servo-motor: %ld, %ld\n", (uint32_t)command.Channel[0], (uint32_t)command.Channel[1]);
+	JLinkRTTPrintf(0, "Armed: %d, Actuator command servo-motor: %ld, %ld\n", armed, (uint32_t)command.Channel[0], (uint32_t)command.Channel[1]);
 
 	for (int n = 0; n < MAX_MIX_ACTUATORS; ++n) {
 		PIOS_Servo_Set(n, command.Channel[n]);
@@ -316,7 +318,7 @@ static void actuator_task(void* parameters)
 			config_steering_driving_mixer();
 		}
 
-		PIOS_WDG_UpdateFlag(PIOS_WDG_ACTUATOR);
+		// PIOS_WDG_UpdateFlag(PIOS_WDG_ACTUATOR);
 
 		UAVObjEvent ev;
 
@@ -482,7 +484,8 @@ static float channel_failsafe_value(int idx)
 		// if no reverse is allowed, return min value
 		//return actuatorSettings.ChannelMin[idx];
 	case CARMIXERSETTINGS_MIXER1TYPE_SERVO:
-		return actuatorSettings.ChannelNeutral[idx];
+		// return actuatorSettings.ChannelNeutral[idx];
+		return SERVO_NEUTRAL_POS;
 	case CARMIXERSETTINGS_MIXER1TYPE_DISABLED:
 		return 0;
 	default:
@@ -513,7 +516,7 @@ static void set_failsafe()
 		PIOS_Servo_Set(n, fs_val);
 	}
 
-	// JLinkRTTPrintf(0, "Failsafe command servo-motor: %ld, %ld\n", (uint32_t)Channel[0], (uint32_t)Channel[1]);
+	JLinkRTTPrintf(0, "Failsafe command servo-motor: %ld, %ld\n", (uint32_t)Channel[0], (uint32_t)Channel[1]);
 
 	PIOS_Servo_Update();
 
