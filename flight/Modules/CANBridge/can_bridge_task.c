@@ -9,6 +9,7 @@
     
 #include "jlink_rtt.h"
 
+bool CANBridge_InitComm();
 void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel);
 
 // Private constants
@@ -47,10 +48,11 @@ int32_t CANBridgeStart()
 	AccelsConnectQueue(accelQueue);
 
 	// Watchdog must be registered before starting task
-	PIOS_WDG_RegisterFlag(PIOS_WDG_MANUAL);
+	// PIOS_WDG_RegisterFlag(PIOS_WDG_MANUAL);
 
 	/* Delay system */
 	PIOS_DELAY_Init();
+	CANBridge_InitComm();
 
 	// Start main task
 	taskHandle = PIOS_Thread_Create(canBridgeTask, "CANBridge", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);
@@ -110,7 +112,7 @@ static void canBridgeTask(void *parameters)
 		}
 
 		CANBridge_UpdateComm(sensor_updated, &gyro_can, &accel_can);
-		PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
+		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 		PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
     }
 }

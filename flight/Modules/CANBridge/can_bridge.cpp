@@ -5,9 +5,14 @@ extern "C" {
     #include "can_bridge_task.h"
 }
 
+extern "C" bool CANBridge_InitComm()
+{
+    return CANBridge::instance().started_;
+}
+
 extern "C" void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel)
 {
-    // SEGGER_RTT_WriteString(0, "Update can bridge\n");
+    SEGGER_RTT_WriteString(0, "Update can bridge\n");
     CANBridge::instance().updateComm(sensor_updated, gyro, accel);
 }
 
@@ -30,11 +35,19 @@ CANBridge::CANBridge():
     
     const int kv_pub_init_res = kv_pub_.init();
     if (kv_pub_init_res < 0)
-        SEGGER_RTT_WriteString(0, "Failed to init publisher\n");
+        SEGGER_RTT_WriteString(0, "Failed to init KeyValue publisher\n");
     else
-        SEGGER_RTT_WriteString(0, "Publisher init successfully\n");
+        SEGGER_RTT_WriteString(0, "Publisher KeyValue init successfully\n");
     kv_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
     kv_pub_.setPriority(uavcan::TransferPriority::MiddleLower);    
+
+    const int imu_pub_init_res = imu_pub_.init();
+    if (imu_pub_init_res < 0)
+        SEGGER_RTT_WriteString(0, "Failed to init IMU publisher\n");
+    else
+        SEGGER_RTT_WriteString(0, "Publisher IMU init successfully\n");
+    imu_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
+    imu_pub_.setPriority(uavcan::TransferPriority::MiddleLower);    
 
     // const int kv_sub_start_res =
     // kv_sub_.start([&](const uavcan::protocol::debug::KeyValue& msg)
@@ -125,4 +138,5 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
             SEGGER_RTT_WriteString(0, "IMU msg sent successfully\n");
         }
     }
+    // SEGGER_RTT_WriteString(0, "CAN Bridge loop");
 }

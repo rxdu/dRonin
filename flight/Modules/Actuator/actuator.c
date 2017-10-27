@@ -116,7 +116,7 @@ volatile enum actuator_interlock actuator_interlock = ACTUATOR_INTERLOCK_OK;
 int32_t ActuatorStart()
 {
 	// Watchdog must be registered before starting task
-	PIOS_WDG_RegisterFlag(PIOS_WDG_ACTUATOR);
+	// PIOS_WDG_RegisterFlag(PIOS_WDG_ACTUATOR);
 
 	// Start main task
 	taskHandle = PIOS_Thread_Create(actuator_task, "Actuator", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);
