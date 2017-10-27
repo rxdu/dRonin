@@ -16,7 +16,7 @@ void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struc
 #if defined(PIOS_MANUAL_STACK_SIZE)
 #define STACK_SIZE_BYTES PIOS_MANUAL_STACK_SIZE
 #else
-#define STACK_SIZE_BYTES 1200
+#define STACK_SIZE_BYTES 9600
 #endif
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
