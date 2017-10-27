@@ -2,12 +2,13 @@
 
 extern "C" {
     #include "jlink_rtt.h"
+    #include "can_bridge_task.h"
 }
 
-extern "C" void CANBridge_UpdateComm()
+extern "C" void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel)
 {
     // SEGGER_RTT_WriteString(0, "Update can bridge\n");
-    CANBridge::instance().updateComm();
+    CANBridge::instance().updateComm(sensor_updated, gyro, accel);
 }
 
 CANBridge::CANBridge():
@@ -15,6 +16,7 @@ CANBridge::CANBridge():
         pios_uavcan::PIOSUAVCANClock::instance()),
     kv_pub_(can_node_),
     kv_sub_(can_node_),
+    imu_pub_(can_node_),
     started_(false)
 {
     can_node_.setNodeID(16);
@@ -49,7 +51,7 @@ CANBridge::CANBridge():
     can_node_.setModeOperational();    
 }
 
-void CANBridge::updateComm()
+void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel)
 {
     const int spin_res = can_node_.spin(uavcan::MonotonicDuration::fromMSec(1000));
     if (spin_res < 0)
@@ -101,4 +103,26 @@ void CANBridge::updateComm()
     // {
     //     SEGGER_RTT_WriteString(0, "CAN msg sent successfully\n");
     // }
+
+    if(sensor_updated)
+    {
+        uavcan::equipment::ahrs::RawIMU imu_msg;  // Always zero initialized
+        imu_msg.rate_gyro_latest[0] = gyro->x;
+        imu_msg.rate_gyro_latest[1] = gyro->y;
+        imu_msg.rate_gyro_latest[2] = gyro->z;
+
+        imu_msg.accelerometer_latest[0] = accel->x;
+        imu_msg.accelerometer_latest[1] = accel->y;
+        imu_msg.accelerometer_latest[2] = accel->z;
+
+        const int pub_res = imu_pub_.broadcast(imu_msg);
+        if (pub_res < 0)
+        {
+            SEGGER_RTT_WriteString(0, "IMU msg publication failure\n");
+        }    
+        else
+        {
+            SEGGER_RTT_WriteString(0, "IMU msg sent successfully\n");
+        }
+    }
 }
