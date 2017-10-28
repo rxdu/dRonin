@@ -7,7 +7,7 @@ extern "C" {
 
 #include "pios_uavcan.hpp"
 #include <uavcan/protocol/debug/KeyValue.hpp> // uavcan.protocol.debug.KeyValue
-#include <uavcan/equipment/ahrs/RawIMU.hpp>
+#include <pixcar/CarRawIMU.hpp>
 
 static constexpr unsigned NodeMemoryPoolSize = 2800;
 
@@ -20,7 +20,7 @@ class CANBridge
     uavcan::Publisher<uavcan::protocol::debug::KeyValue> kv_pub_;
     uavcan::Subscriber<uavcan::protocol::debug::KeyValue> kv_sub_;
     
-    uavcan::Publisher<uavcan::equipment::ahrs::RawIMU> imu_pub_;
+    uavcan::Publisher<pixcar::CarRawIMU> imu_pub_;
 
 public:
     bool started_;

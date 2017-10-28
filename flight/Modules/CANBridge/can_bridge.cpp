@@ -114,22 +114,33 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
     // }    
     // else
     // {
-    //     SEGGER_RTT_WriteString(0, "CAN msg sent successfully\n");
+    //     SEGGER_RTT_WriteString(0, "KV msg sent successfully\n");
     // }
 
     if(sensor_updated)
     {
-        uavcan::equipment::ahrs::RawIMU imu_msg;  // Always zero initialized
-        imu_msg.rate_gyro_latest[0] = gyro->x;
-        imu_msg.rate_gyro_latest[1] = gyro->y;
-        imu_msg.rate_gyro_latest[2] = gyro->z;
+        pixcar::CarRawIMU imu_msg;  // Always zero initialized
+        // imu_msg.gyro[0] = gyro->x;
+        // imu_msg.gyro[1] = gyro->y;
+        // imu_msg.gyro[2] = gyro->z;
 
-        imu_msg.accelerometer_latest[0] = accel->x;
-        imu_msg.accelerometer_latest[1] = accel->y;
-        imu_msg.accelerometer_latest[2] = accel->z;
+        // imu_msg.accel[0] = accel->x;
+        // imu_msg.accel[1] = accel->y;
+        // imu_msg.accel[2] = accel->z;
 
-        const int pub_res = imu_pub_.broadcast(imu_msg);
-        if (pub_res < 0)
+        // imu_msg.gyro[0] = (float)0.1;
+        // imu_msg.gyro[1] = (float)0.2;
+        // imu_msg.gyro[2] = (float)0.3;
+
+        // imu_msg.accel[0] = (float)0.4;
+        // imu_msg.accel[1] = (float)0.5;
+        // imu_msg.accel[2] = (float)0.6;
+
+        imu_msg.gyro = (float)12;
+        imu_msg.accel = (float)24;
+
+        const int pub_res2 = imu_pub_.broadcast(imu_msg);
+        if (pub_res2 < 0)
         {
             SEGGER_RTT_WriteString(0, "IMU msg publication failure\n");
         }    

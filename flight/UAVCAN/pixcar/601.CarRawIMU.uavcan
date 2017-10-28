@@ -1,4 +1,6 @@
 
 # 4-byte float
-float32[3] gyro
-float32[3] accel
+#float32[3] gyro
+#float32[3] accel
+float32 gyro
+float32 accel
