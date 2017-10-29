@@ -93,25 +93,27 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
         // imu_msg.accel[2] = (float)0.6;
 
         const int imu_pub_res = imu_pub_.broadcast(imu_msg);
-        if (imu_pub_res < 0)
-        {
-            SEGGER_RTT_WriteString(0, "IMU msg publication failure\n");
-        }    
-        else
-        {
-            SEGGER_RTT_WriteString(0, "IMU msg sent successfully\n");
-        }
+        (void)imu_pub_res;
+        // if (imu_pub_res < 0)
+        // {
+        //     SEGGER_RTT_WriteString(0, "IMU msg publication failure\n");
+        // }    
+        // else
+        // {
+        //     SEGGER_RTT_WriteString(0, "IMU msg sent successfully\n");
+        // }
     }
 
     pixcar::CarSpeed spd_msg;
     spd_msg.speed = *speed;
     const int spd_pub_res = spd_pub_.broadcast(spd_msg);
-    if (spd_pub_res < 0)
-    {
-        SEGGER_RTT_WriteString(0, "Speed msg publication failure\n");
-    }    
-    else
-    {
-        SEGGER_RTT_WriteString(0, "Speed msg sent successfully\n");
-    }
+    (void)spd_pub_res;
+    // if (spd_pub_res < 0)
+    // {
+    //     SEGGER_RTT_WriteString(0, "Speed msg publication failure\n");
+    // }    
+    // else
+    // {
+    //     SEGGER_RTT_WriteString(0, "Speed msg sent successfully\n");
+    // }
 }

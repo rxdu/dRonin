@@ -134,16 +134,16 @@
 			<description>Disarm time</description>
 		</field>
 		<!-- Note these options should be identical to those in NavigationDesired.NavigationMode -->
-		<field name="Navigation1Settings" parent="SharedDefs.NavigationMode" type="enum" elementnames="Roll,Pitch,Yaw" defaultvalue="Manual,Manual,LineFollowing">
+		<field name="NavigationSettings" parent="SharedDefs.NavigationMode" type="enum" elementnames="Roll,Pitch,Yaw" defaultvalue="Manual,Manual,LineFollowing">
 			<description>Navigation 1 settings</description>
 		</field>
-		<field name="Navigation1Reprojection" parent="SharedDefs.ReprojectionMode" type="enum" elements="1" defaultvalue="None">
+		<field name="NavigationReprojection" parent="SharedDefs.ReprojectionMode" type="enum" elements="1" defaultvalue="None">
 			<description>Navigation 1 reprojection</description>
 		</field>
 		<field name="DrivingModeNumber" units="" type="uint8" elements="1" defaultvalue="3">
 			<description>Number of driving modes</description>
 		</field>
-		<field name="DrivingModePosition" units="" type="enum" elements="3" parent="SharedDefs.DrivingMode" defaultvalue="Manual,Manual,Manual">
+		<field name="DrivingModePosition" units="" type="enum" elements="3" parent="SharedDefs.DrivingMode" defaultvalue="Manual,Navigation,Manual">
 			<description>Driving mode per position</description>
 		</field>
 		<field name="ArmedTimeout" units="ms" type="uint16" elements="1" defaultvalue="30000">

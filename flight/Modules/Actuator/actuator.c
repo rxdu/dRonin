@@ -187,12 +187,12 @@ static void post_process_scale_and_commit(float *actuator_vect,
 	for (int ct = 0; ct < MAX_MIX_ACTUATORS; ct++) {
 		// Motors have additional protection for when to be on
 		if (get_mixer_type(ct) == CARMIXERSETTINGS_MIXER1TYPE_MOTOR) {
-			// if (!armed) {
-			// 	actuator_vect[ct] = 0;  //force min throttle
-			// } 
-			// else {
+			if (!armed) {
+				actuator_vect[ct] = 0;  //force min throttle
+			} 
+			else {
 				actuator_vect[ct] = actuator_vect[ct] * gain + offset;
-			// }
+			}
 		}
 
 		command.Channel[ct] = scale_channel(actuator_vect[ct], ct);
@@ -245,9 +245,9 @@ static void process_input_data(uint32_t this_systime,
 
 	*armed = drivingStatus.Armed == DRIVINGSTATUS_ARMED_ARMED;
 
-	// if (!*armed) {
-	// 	throttle_val = 0;
-	// }
+	if (!*armed) {
+		throttle_val = 0;
+	}
 
 	*stabilize_now = throttle_val > 0.0f;
 

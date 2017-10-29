@@ -105,6 +105,7 @@ static bool                       settings_updated;
 // Private functions
 static void update_actuator_desired(CarManualControlCommandData * cmd);
 static void update_navigation_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings);
+static void update_failsafe_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings);
 // static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
 static void set_driving_mode();
 static void process_transmitter_events(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings, bool valid);
@@ -362,7 +363,6 @@ int32_t transmitter_control_update()
 	// JLinkRTTPrintf(0, "Valid channel [1]-[8]: %ld, %ld, %ld, %ld, %ld, %ld, %ld, %ld\n", validChannel[0], validChannel[1],
 	// validChannel[2],validChannel[3],validChannel[4],validChannel[5],validChannel[6], validChannel[7]);
 
-
 	// Implement hysteresis loop on connection status
 	if (valid_input_detected && (++connected_count > 10)) {
 		cmd.Connected = CARMANUALCONTROLCOMMAND_CONNECTED_TRUE;
@@ -463,9 +463,11 @@ int32_t transmitter_control_select(bool reset_controller)
 	case DRIVINGSTATUS_DRIVINGMODE_MANUAL:
 		update_actuator_desired(&cmd);
 		break;
-	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION1:
-	case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
+	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
 		update_navigation_desired(&cmd, &settings);
+		break;
+	case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
+		update_failsafe_desired(&cmd, &settings);
 		break;
 	default:
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_UNDEFINED);
@@ -678,6 +680,7 @@ static void process_transmitter_events(CarManualControlCommandData * cmd, CarMan
 	// 		low_throt = false;
 	// 	}
 	// }
+
 	// Do not disarm due to low throttle
 	bool low_throt = false;
 
@@ -919,6 +922,20 @@ static void update_actuator_desired(CarManualControlCommandData * cmd)
 //! In navigation mode, set navigation desired
 static void update_navigation_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings)
 {
+	CarActuatorDesiredData actuator;
+	CarActuatorDesiredGet(&actuator);
+	actuator.Roll = manual_control_command->Roll;
+	actuator.Pitch = manual_control_command->Pitch;
+	actuator.Yaw = manual_control_command->Yaw;
+	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
+	actuator.Steering = 0;
+	actuator.Throttle = 0;
+
+	CarActuatorDesiredSet(&actuator);
+}
+
+static void update_failsafe_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings)
+{
 	NavigationDesiredData navigation;
 	NavigationDesiredGet(&navigation);
 
@@ -941,7 +958,7 @@ static void update_navigation_desired(CarManualControlCommandData * manual_contr
 
 	DrivingStatusDrivingModeGet(&drivingMode);
 	switch(drivingMode) {
-		case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION1:
+		case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
 			nav_modes = NAVIGATION1_SETTINGS;
 			break;
 		case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:

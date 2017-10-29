@@ -128,7 +128,7 @@ static void canBridgeTask(void *parameters)
 static float calcCarSpeed()
 {
 	uint16_t hall_reading = PIOS_TIM_GetHallSensorReading();
-	JLinkRTTPrintf(0, "hall reading: %ld\n",hall_reading);
+	// JLinkRTTPrintf(0, "hall reading: %ld\n",hall_reading);
 	float speed = 1.0e6/(hall_reading * 6.0)/GEAR_RATIO*(M_PI*WHEEL_DIAMETER);
 	return speed;
 }

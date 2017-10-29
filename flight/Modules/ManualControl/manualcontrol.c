@@ -134,7 +134,8 @@ static void manualControlTask(void *parameters)
 		// Process periodic data for each of the controllers, including reading
 		// all available inputs
 		transmitter_control_update();
-
+		failsafe_control_update();
+		
 		// Initialize to invalid value to ensure first update sets DrivingStatus
 		static DrivingStatusControlSourceOptions last_control_selection = -1;
 
@@ -346,8 +347,8 @@ static DrivingStatusControlSourceOptions control_source_select()
 	else {
 		return DRIVINGSTATUS_CONTROLSOURCE_TRANSMITTER;
 	}
-
 }
+
 /**
  * @brief Determine if the aircraft is safe to arm based on alarms
  * @returns True if safe to arm, false otherwise
