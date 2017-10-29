@@ -238,7 +238,7 @@ static void PIOS_UAVCAN_Start(uintptr_t can_id)
  * @returns The number of the mailbox that is used for transmission or
   *         CAN_TxStatus_NoMailBox if there is no empty mailbox.
  */
-uint8_t PIOS_CAN_TxUAVCANData(uint32_t msg_id, uint8_t is_ext, uint8_t *data)
+uint8_t PIOS_CAN_TxUAVCANData(uint32_t msg_id, uint8_t is_ext, uint8_t dlc, uint8_t *data)
 {
 	// Format and send the message
 	CanTxMsg msg;
@@ -255,7 +255,7 @@ uint8_t PIOS_CAN_TxUAVCANData(uint32_t msg_id, uint8_t is_ext, uint8_t *data)
 		msg.IDE = CAN_ID_EXT;
 	}	
 	msg.RTR = CAN_RTR_DATA;
-	msg.DLC = 8;
+	msg.DLC = dlc;
 	memcpy(msg.Data, data, msg.DLC);
 
 	uint8_t transmit_mailbox = 0xff;

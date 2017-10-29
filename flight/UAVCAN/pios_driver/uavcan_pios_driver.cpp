@@ -35,7 +35,7 @@ extern "C" void PIOSUAVCAN_RxISR_Callback(uint32_t msg_id, bool is_ext, uint8_t 
 
 // Defined in C source files
 extern "C" {
-    uint8_t PIOS_CAN_TxUAVCANData(uint32_t msg_id, uint8_t is_ext, uint8_t *data); 
+    uint8_t PIOS_CAN_TxUAVCANData(uint32_t msg_id, uint8_t is_ext, uint8_t dlc, uint8_t *data); 
     void PIOS_CAN_CancelTransmit(uint8_t Mailbox);
     uint8_t PIOS_CAN_GetLastErrorCode();
     void PIOS_CAN_ClearLEC();
@@ -58,7 +58,7 @@ uavcan::int16_t PIOSUAVCANDriver::send(const uavcan::CanFrame& frame,
     uint8_t ext_flag = 0;
     if(frame.isExtended())
         ext_flag = 1;
-    uint8_t txmailbox = PIOS_CAN_TxUAVCANData(frame.id, ext_flag, (uint8_t*)frame.data);
+    uint8_t txmailbox = PIOS_CAN_TxUAVCANData(frame.id, ext_flag, frame.dlc, (uint8_t*)frame.data);
 
     // No empty mailbox available
     if(txmailbox == CAN_TxStatus_NoMailBox)

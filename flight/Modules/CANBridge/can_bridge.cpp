@@ -146,13 +146,13 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
     if(sensor_updated)
     {
         pixcar::CarRawIMU imu_msg;  // Always zero initialized
-        // imu_msg.gyro[0] = gyro->x;
-        // imu_msg.gyro[1] = gyro->y;
-        // imu_msg.gyro[2] = gyro->z;
+        imu_msg.gyro[0] = gyro->x;
+        imu_msg.gyro[1] = gyro->y;
+        imu_msg.gyro[2] = gyro->z;
 
-        // imu_msg.accel[0] = accel->x;
-        // imu_msg.accel[1] = accel->y;
-        // imu_msg.accel[2] = accel->z;
+        imu_msg.accel[0] = accel->x;
+        imu_msg.accel[1] = accel->y;
+        imu_msg.accel[2] = accel->z;
 
         // imu_msg.gyro[0] = (float)0.1;
         // imu_msg.gyro[1] = (float)0.2;
@@ -162,8 +162,8 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
         // imu_msg.accel[1] = (float)0.5;
         // imu_msg.accel[2] = (float)0.6;
 
-        imu_msg.gyro = (float)12;
-        imu_msg.accel = (float)24;
+        // imu_msg.gyro = (float)12;
+        // imu_msg.accel = (float)24;
 
         const int pub_res2 = imu_pub_.broadcast(imu_msg);
         if (pub_res2 < 0)

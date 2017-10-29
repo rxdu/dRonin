@@ -15,16 +15,14 @@
 
 /******************************* Source text **********************************
 # 4-byte float
-#float32[3] gyro
-#float32[3] accel
-float32 gyro
-float32 accel
+float32[3] gyro
+float32[3] accel
 ******************************************************************************/
 
 /********************* DSDL signature source definition ***********************
 pixcar.CarRawIMU
-saturated float32 gyro
-saturated float32 accel
+saturated float32[3] gyro
+saturated float32[3] accel
 ******************************************************************************/
 
 #undef gyro
@@ -45,8 +43,8 @@ struct UAVCAN_EXPORT CarRawIMU_
 
     struct FieldTypes
     {
-        typedef ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate > gyro;
-        typedef ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate > accel;
+        typedef ::uavcan::Array< ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate >, ::uavcan::ArrayModeStatic, 3 > gyro;
+        typedef ::uavcan::Array< ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate >, ::uavcan::ArrayModeStatic, 3 > accel;
     };
 
     enum
@@ -81,7 +79,7 @@ struct UAVCAN_EXPORT CarRawIMU_
          * This check shall never be performed in user code because MaxBitLen value
          * actually depends on the nested types, thus it is not invariant.
          */
-        ::uavcan::StaticAssert<64 == MaxBitLen>::check();
+        ::uavcan::StaticAssert<192 == MaxBitLen>::check();
 #endif
     }
 
@@ -180,7 +178,7 @@ int CarRawIMU_<_tmpl>::decode(ReferenceType self, ::uavcan::ScalarCodec& codec,
 template <int _tmpl>
 ::uavcan::DataTypeSignature CarRawIMU_<_tmpl>::getDataTypeSignature()
 {
-    ::uavcan::DataTypeSignature signature(0x4D80AE96729FF286ULL);
+    ::uavcan::DataTypeSignature signature(0x1C6B46151D291028ULL);
 
     FieldTypes::gyro::extendDataTypeSignature(signature);
     FieldTypes::accel::extendDataTypeSignature(signature);
