@@ -22,6 +22,8 @@ CANBridge::CANBridge():
     kv_pub_(can_node_),
     kv_sub_(can_node_),
     imu_pub_(can_node_),
+    imu_sub_(can_node_),
+    cmd_sub_(can_node_),
     started_(false)
 {
     can_node_.setNodeID(16);
@@ -47,7 +49,7 @@ CANBridge::CANBridge():
     else
         SEGGER_RTT_WriteString(0, "Publisher IMU init successfully\n");
     imu_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
-    imu_pub_.setPriority(uavcan::TransferPriority::MiddleLower);    
+    imu_pub_.setPriority(uavcan::TransferPriority::OneLowerThanHighest);    
 
     // const int kv_sub_start_res =
     // kv_sub_.start([&](const uavcan::protocol::debug::KeyValue& msg)
@@ -60,6 +62,30 @@ CANBridge::CANBridge():
     //     SEGGER_RTT_WriteString(0, "Failed to init subscriber\n");
     // else
     //     SEGGER_RTT_WriteString(0, "Subscriber init successfully\n");
+
+    // const int imu_sub_start_res =
+    // imu_sub_.start([&](const pixcar::CarRawIMU& msg)
+    //     {
+    //         SEGGER_RTT_WriteString(0, "Msg received\n");
+    //         JLinkRTTPrintf(0, "msg key: %d, %d\n",(int32_t)msg.gyro, (int32_t)msg.accel);
+    //     }
+    // );
+    // if (imu_sub_start_res < 0)
+    //     SEGGER_RTT_WriteString(0, "Failed to init IMU subscriber\n");
+    // else
+    //     SEGGER_RTT_WriteString(0, "Subscriber IMU init successfully\n");
+
+    const int cmd_sub_start_res =
+    cmd_sub_.start([&](const pixcar::CarCommand& msg)
+        {
+            SEGGER_RTT_WriteString(0, "Msg received\n");
+            JLinkRTTPrintf(0, "msg command: %d, %d\n",(int32_t)(msg.servo_cmd*100), (int32_t)(msg.motor_cmd*100));
+        }
+    );
+    if (cmd_sub_start_res < 0)
+        SEGGER_RTT_WriteString(0, "Failed to init CMD subscriber\n");
+    else
+        SEGGER_RTT_WriteString(0, "Subscriber CMD init successfully\n");
 
     can_node_.setModeOperational();    
 }
