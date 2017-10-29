@@ -10,7 +10,7 @@
 #include "jlink_rtt.h"
 
 bool CANBridge_InitComm();
-void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel);
+void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed);
 
 // Private constants
 #if defined(PIOS_MANUAL_STACK_SIZE)
@@ -20,10 +20,14 @@ void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struc
 #endif
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
-#define UPDATE_PERIOD_MS 500
+#define UPDATE_PERIOD_MS 5
 #define FAILSAFE_TIMEOUT_MS 10
 
 #define CAN_RX_TIMEOUT_MS 10
+
+// Parameters for speed estimation
+#define WHEEL_DIAMETER 0.065
+#define GEAR_RATIO	6.58	// with 20T pinion gear
 
 // Private variables
 static struct pios_thread *taskHandle;
@@ -34,6 +38,7 @@ static struct pios_queue *accelQueue;
 
 // Private functions
 static void canBridgeTask(void *parameters);
+static float calcCarSpeed(void);
 
 /**
  * Module starting
@@ -95,7 +100,7 @@ static void canBridgeTask(void *parameters)
 			sensor_updated = false;
 		}
 
-		// Send sensor data to CAN bus if updated
+		// Send IMU sensor data to CAN bus if updated
 		struct CANIMURawData gyro_can, accel_can;
 		if(sensor_updated)
 		{
@@ -111,8 +116,18 @@ static void canBridgeTask(void *parameters)
 			accel_can.z = accelsData.z;
 		}
 
-		CANBridge_UpdateComm(sensor_updated, &gyro_can, &accel_can);
+		// Send latest speed measurement
+		float speed = calcCarSpeed();
+
+		CANBridge_UpdateComm(sensor_updated, &gyro_can, &accel_can, &speed);
 		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 		PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
     }
+}
+
+static float calcCarSpeed()
+{
+	uint16_t hall_reading = PIOS_TIM_GetHallSensorReading();
+	float speed = 1.0/(hall_reading * 6.0)/GEAR_RATIO*(M_PI*WHEEL_DIAMETER);
+	return speed;
 }

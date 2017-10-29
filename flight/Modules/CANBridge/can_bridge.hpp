@@ -6,8 +6,8 @@ extern "C" {
 }
 
 #include "pios_uavcan.hpp"
-#include <uavcan/protocol/debug/KeyValue.hpp> // uavcan.protocol.debug.KeyValue
 #include <pixcar/CarRawIMU.hpp>
+#include <pixcar/CarSpeed.hpp>
 #include <pixcar/CarCommand.hpp>
 
 static constexpr unsigned NodeMemoryPoolSize = 2800;
@@ -17,13 +17,9 @@ class CANBridge
     CANBridge();
 
     uavcan::Node<NodeMemoryPoolSize> can_node_;
-
-    uavcan::Publisher<uavcan::protocol::debug::KeyValue> kv_pub_;
-    uavcan::Subscriber<uavcan::protocol::debug::KeyValue> kv_sub_;
     
     uavcan::Publisher<pixcar::CarRawIMU> imu_pub_;
-    uavcan::Subscriber<pixcar::CarRawIMU> imu_sub_;
-
+    uavcan::Publisher<pixcar::CarSpeed> spd_pub_;
     uavcan::Subscriber<pixcar::CarCommand> cmd_sub_;
 
 public:
@@ -36,7 +32,7 @@ public:
         return can_bridge;
     };
 
-    void updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel);
+    void updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed);
 };
 
 #endif /* MODULES_CAN_BRIDGE_HPP */

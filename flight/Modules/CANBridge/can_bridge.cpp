@@ -10,19 +10,17 @@ extern "C" bool CANBridge_InitComm()
     return CANBridge::instance().started_;
 }
 
-extern "C" void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel)
+extern "C" void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed)
 {
-    SEGGER_RTT_WriteString(0, "Update can bridge\n");
-    CANBridge::instance().updateComm(sensor_updated, gyro, accel);
+    // SEGGER_RTT_WriteString(0, "Update can bridge\n");
+    CANBridge::instance().updateComm(sensor_updated, gyro, accel, speed);
 }
 
 CANBridge::CANBridge():
     can_node_(pios_uavcan::PIOSUAVCANDriver::instance(),
         pios_uavcan::PIOSUAVCANClock::instance()),
-    kv_pub_(can_node_),
-    kv_sub_(can_node_),
     imu_pub_(can_node_),
-    imu_sub_(can_node_),
+    spd_pub_(can_node_),
     cmd_sub_(can_node_),
     started_(false)
 {
@@ -34,14 +32,6 @@ CANBridge::CANBridge():
         started_ = false;
     else
         started_ = true;
-    
-    const int kv_pub_init_res = kv_pub_.init();
-    if (kv_pub_init_res < 0)
-        SEGGER_RTT_WriteString(0, "Failed to init KeyValue publisher\n");
-    else
-        SEGGER_RTT_WriteString(0, "Publisher KeyValue init successfully\n");
-    kv_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
-    kv_pub_.setPriority(uavcan::TransferPriority::MiddleLower);    
 
     const int imu_pub_init_res = imu_pub_.init();
     if (imu_pub_init_res < 0)
@@ -51,29 +41,13 @@ CANBridge::CANBridge():
     imu_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
     imu_pub_.setPriority(uavcan::TransferPriority::OneLowerThanHighest);    
 
-    // const int kv_sub_start_res =
-    // kv_sub_.start([&](const uavcan::protocol::debug::KeyValue& msg)
-    //     {
-    //         SEGGER_RTT_WriteString(0, "Msg received\n");
-    //         JLinkRTTPrintf(0, "msg key: %d, %d, %d\n",msg.key[0],msg.key[1],msg.key[2]);
-    //     }
-    // );
-    // if (kv_sub_start_res < 0)
-    //     SEGGER_RTT_WriteString(0, "Failed to init subscriber\n");
-    // else
-    //     SEGGER_RTT_WriteString(0, "Subscriber init successfully\n");
-
-    // const int imu_sub_start_res =
-    // imu_sub_.start([&](const pixcar::CarRawIMU& msg)
-    //     {
-    //         SEGGER_RTT_WriteString(0, "Msg received\n");
-    //         JLinkRTTPrintf(0, "msg key: %d, %d\n",(int32_t)msg.gyro, (int32_t)msg.accel);
-    //     }
-    // );
-    // if (imu_sub_start_res < 0)
-    //     SEGGER_RTT_WriteString(0, "Failed to init IMU subscriber\n");
-    // else
-    //     SEGGER_RTT_WriteString(0, "Subscriber IMU init successfully\n");
+    const int spd_pub_init_res = spd_pub_.init();
+    if (spd_pub_init_res < 0)
+        SEGGER_RTT_WriteString(0, "Failed to init Speed publisher\n");
+    else
+        SEGGER_RTT_WriteString(0, "Publisher Speed init successfully\n");
+    spd_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
+    spd_pub_.setPriority(uavcan::TransferPriority::OneLowerThanHighest);    
 
     const int cmd_sub_start_res =
     cmd_sub_.start([&](const pixcar::CarCommand& msg)
@@ -90,58 +64,14 @@ CANBridge::CANBridge():
     can_node_.setModeOperational();    
 }
 
-void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel)
+void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed)
 {
-    const int spin_res = can_node_.spin(uavcan::MonotonicDuration::fromMSec(1000));
+    const int spin_res = can_node_.spin(uavcan::MonotonicDuration::fromMSec(3));
     if (spin_res < 0)
     {
         SEGGER_RTT_WriteString(0, "Transient failure \n");
     }
-
-    /*
-     * Publishing a random value using the publisher created above.
-     * All message types have zero-initializing default constructors.
-     * Relevant usage info for every data type is provided in its DSDL definition.
-     */
-    uavcan::protocol::debug::KeyValue kv_msg;  // Always zero initialized
-    kv_msg.value = std::rand() / float(RAND_MAX);
-
-    /*
-     * Arrays in DSDL types are quite extensive in the sense that they can be static,
-     * or dynamic (no heap needed - all memory is pre-allocated), or they can emulate std::string.
-     * The last one is called string-like arrays.
-     * ASCII strings can be directly assigned or appended to string-like arrays.
-     * For more info, please read the documentation for the class uavcan::Array<>.
-     */
-    // kv_msg.key = "r";   // "a"
-    // kv_msg.key += "u";  // "ab"
-    // kv_msg.key += "i";  // "abc"
-    // kv_msg.key += "x";  // "abc"
-    // kv_msg.key += "i";  // "abc"
-    // kv_msg.key += "a";  // "abc"
-    // kv_msg.key += "n";  // "abc"
-    // kv_msg.key += "g";  // "abc"
-    // kv_msg.key += "d";  // "abc"
-    // kv_msg.key += "u";  // "abc"
-    kv_msg.key = "ruixiang";
-
-    // JLinkRTTPrintf(0, "cap: %ld, used: %ld, peak: %ld\n", 
-    //     can_node_.getAllocator().getBlockCapacity(), 
-    //     can_node_.getAllocator().getNumUsedBlocks(),
-    //     can_node_.getAllocator().getPeakNumUsedBlocks());
-
-    /*
-     * Publishing the message.
-     */
-    // const int pub_res = kv_pub_.broadcast(kv_msg);
-    // if (pub_res < 0)
-    // {
-    //     SEGGER_RTT_WriteString(0, "KV publication failure\n");
-    // }    
-    // else
-    // {
-    //     SEGGER_RTT_WriteString(0, "KV msg sent successfully\n");
-    // }
+    // can_node_.spinOnce();
 
     if(sensor_updated)
     {
@@ -162,11 +92,8 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
         // imu_msg.accel[1] = (float)0.5;
         // imu_msg.accel[2] = (float)0.6;
 
-        // imu_msg.gyro = (float)12;
-        // imu_msg.accel = (float)24;
-
-        const int pub_res2 = imu_pub_.broadcast(imu_msg);
-        if (pub_res2 < 0)
+        const int imu_pub_res = imu_pub_.broadcast(imu_msg);
+        if (imu_pub_res < 0)
         {
             SEGGER_RTT_WriteString(0, "IMU msg publication failure\n");
         }    
@@ -175,5 +102,16 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
             SEGGER_RTT_WriteString(0, "IMU msg sent successfully\n");
         }
     }
-    // SEGGER_RTT_WriteString(0, "CAN Bridge loop");
+
+    pixcar::CarSpeed spd_msg;
+    spd_msg.speed = *speed;
+    const int spd_pub_res = spd_pub_.broadcast(spd_msg);
+    if (spd_pub_res < 0)
+    {
+        SEGGER_RTT_WriteString(0, "Speed msg publication failure\n");
+    }    
+    else
+    {
+        SEGGER_RTT_WriteString(0, "Speed msg sent successfully\n");
+    }
 }
