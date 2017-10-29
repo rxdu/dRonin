@@ -8,4 +8,12 @@ struct CANIMURawData
     float z;
 };
 
+struct CANCmdData
+{
+    float servo;
+    float motor;
+};
+
+void getCmdFromCAN(float* servo_cmd, float* motor_cmd);
+
 #endif /* CAN_BRIDGE_TASK_H */

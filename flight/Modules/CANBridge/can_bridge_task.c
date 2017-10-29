@@ -24,6 +24,7 @@ void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struc
 #define FAILSAFE_TIMEOUT_MS 10
 
 #define CAN_RX_TIMEOUT_MS 10
+#define CAN_CMD_QUEUE_LEN 2
 
 // Parameters for speed estimation
 #define WHEEL_DIAMETER 0.065
@@ -32,6 +33,10 @@ void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struc
 // Private variables
 static struct pios_thread *taskHandle;
 
+// cmd queue (from CAN bus)
+// static struct pios_queue *canCmdQueue;
+static struct CANCmdData cmd_from_can;
+
 // sensor queues
 static struct pios_queue *gyroQueue;
 static struct pios_queue *accelQueue;
@@ -39,6 +44,25 @@ static struct pios_queue *accelQueue;
 // Private functions
 static void canBridgeTask(void *parameters);
 static float calcCarSpeed(void);
+
+void updateCmdFromCAN(float servo_cmd, float motor_cmd)
+{
+	// struct CANCmdData cmd_data;
+	// cmd_data.servo = servo_cmd;
+	// cmd_data.motor = motor_cmd;
+	// if(PIOS_Queue_Send(canCmdQueue, &cmd_data, 0))
+	// {
+	// 	JLinkRTTPrintf(0, "CMD queue sent: %d, %d\n",(int32_t)(cmd_data.servo*100), (int32_t)(cmd_data.motor*100));
+	// }
+	cmd_from_can.servo = servo_cmd;
+	cmd_from_can.motor = motor_cmd;
+}
+
+void getCmdFromCAN(float* servo_cmd, float* motor_cmd)
+{
+	*servo_cmd = cmd_from_can.servo;
+	*motor_cmd = cmd_from_can.motor;
+}
 
 /**
  * Module starting
@@ -71,8 +95,9 @@ int32_t CANBridgeStart()
  */
 int32_t CANBridgeInitialize()
 {
-
-	// queue = PIOS_CAN_RegisterMessageQueue(pios_can_id, PIOS_CAN_GIMBAL);
+	// canCmdQueue = PIOS_Queue_Create(CAN_CMD_QUEUE_LEN, sizeof(struct CANCmdData));
+	// if (canCmdQueue == NULL)
+	// 	return -1;
 
 	return 0;
 }

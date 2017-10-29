@@ -62,7 +62,7 @@ extern uintptr_t pios_can_id;
 #define CAN_RX_TIMEOUT_MS 10
 
 // Private variables
-// static struct pios_queue *queue;
+static struct pios_queue *queue;
 static struct pios_thread *taskHandle;
 
 // Private functions
@@ -93,7 +93,7 @@ int32_t TestTaskInitialize()
 {
 
 	// queue = PIOS_CAN_RegisterMessageQueue(pios_can_id, PIOS_CAN_GIMBAL);
-
+	 
 	return 0;
 }
 

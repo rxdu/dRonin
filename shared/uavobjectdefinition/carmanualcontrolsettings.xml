@@ -135,10 +135,10 @@
 		</field>
 		<!-- Note these options should be identical to those in NavigationDesired.NavigationMode -->
 		<field name="NavigationSettings" parent="SharedDefs.NavigationMode" type="enum" elementnames="Roll,Pitch,Yaw" defaultvalue="Manual,Manual,LineFollowing">
-			<description>Navigation 1 settings</description>
+			<description>Navigation settings</description>
 		</field>
 		<field name="NavigationReprojection" parent="SharedDefs.ReprojectionMode" type="enum" elements="1" defaultvalue="None">
-			<description>Navigation 1 reprojection</description>
+			<description>Navigation reprojection</description>
 		</field>
 		<field name="DrivingModeNumber" units="" type="uint8" elements="1" defaultvalue="3">
 			<description>Number of driving modes</description>

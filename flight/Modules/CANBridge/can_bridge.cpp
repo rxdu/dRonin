@@ -5,6 +5,8 @@ extern "C" {
     #include "can_bridge_task.h"
 }
 
+extern "C" void updateCmdFromCAN(float servo_cmd, float motor_cmd);
+
 extern "C" bool CANBridge_InitComm()
 {
     return CANBridge::instance().started_;
@@ -52,8 +54,9 @@ CANBridge::CANBridge():
     const int cmd_sub_start_res =
     cmd_sub_.start([&](const pixcar::CarCommand& msg)
         {
-            SEGGER_RTT_WriteString(0, "Msg received\n");
-            JLinkRTTPrintf(0, "msg command: %d, %d\n",(int32_t)(msg.servo_cmd*100), (int32_t)(msg.motor_cmd*100));
+            JLinkRTTPrintf(0, "Msg received: %d, %d\n",(int32_t)(msg.servo_cmd*100), (int32_t)(msg.motor_cmd*100));
+
+            updateCmdFromCAN(msg.servo_cmd, msg.motor_cmd);
         }
     );
     if (cmd_sub_start_res < 0)

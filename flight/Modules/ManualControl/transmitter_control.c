@@ -37,6 +37,7 @@
 #include "control.h"
 #include "transmitter_control.h"
 #include "pios_thread.h"
+#include "can_bridge_task.h"
 
 #include "altitudeholddesired.h"
 #include "altitudeholdsettings.h"
@@ -922,14 +923,18 @@ static void update_actuator_desired(CarManualControlCommandData * cmd)
 //! In navigation mode, set navigation desired
 static void update_navigation_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings)
 {
+	float servo_cmd, motor_cmd;
+	getCmdFromCAN(&servo_cmd, &motor_cmd);
+
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);
 	actuator.Roll = manual_control_command->Roll;
 	actuator.Pitch = manual_control_command->Pitch;
 	actuator.Yaw = manual_control_command->Yaw;
 	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
-	actuator.Steering = 0;
-	actuator.Throttle = 0;
+	actuator.Steering = servo_cmd;
+	actuator.Throttle = motor_cmd;
+	JLinkRTTPrintf(0, "cmd from CAN set: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
 
 	CarActuatorDesiredSet(&actuator);
 }
