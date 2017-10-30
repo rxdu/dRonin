@@ -64,6 +64,12 @@ void getCmdFromCAN(float* servo_cmd, float* motor_cmd)
 	*motor_cmd = cmd_from_can.motor;
 }
 
+void resetCmdFromCAN(void)
+{
+	cmd_from_can.servo = 0;
+	cmd_from_can.motor = 0;
+}
+
 /**
  * Module starting
  */

@@ -462,12 +462,14 @@ int32_t transmitter_control_select(bool reset_controller)
 
 	switch(drivingMode) {
 	case DRIVINGSTATUS_DRIVINGMODE_MANUAL:
+		resetCmdFromCAN();
 		update_actuator_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
 		update_navigation_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
+		resetCmdFromCAN();
 		update_failsafe_desired(&cmd);
 		break;
 	default:

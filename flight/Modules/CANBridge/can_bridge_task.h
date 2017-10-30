@@ -15,5 +15,6 @@ struct CANCmdData
 };
 
 void getCmdFromCAN(float* servo_cmd, float* motor_cmd);
+void resetCmdFromCAN(void);
 
 #endif /* CAN_BRIDGE_TASK_H */
