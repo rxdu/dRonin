@@ -83,6 +83,10 @@ int32_t CANBridgeStart()
 	PIOS_DELAY_Init();
 	CANBridge_InitComm();
 
+	// Make sure CAN commands initialized with safe value
+	cmd_from_can.servo = 0;
+	cmd_from_can.motor = 0;
+
 	// Start main task
 	taskHandle = PIOS_Thread_Create(canBridgeTask, "CANBridge", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);
 	//TaskMonitorAdd(TASKINFO_RUNNING_MANUALCONTROL, taskHandle);

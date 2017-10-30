@@ -105,8 +105,8 @@ static bool                       settings_updated;
 
 // Private functions
 static void update_actuator_desired(CarManualControlCommandData * cmd);
-static void update_navigation_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings);
-static void update_failsafe_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings);
+static void update_navigation_desired(CarManualControlCommandData * cmd);
+static void update_failsafe_desired(CarManualControlCommandData * cmd);
 // static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
 static void set_driving_mode();
 static void process_transmitter_events(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings, bool valid);
@@ -465,10 +465,10 @@ int32_t transmitter_control_select(bool reset_controller)
 		update_actuator_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
-		update_navigation_desired(&cmd, &settings);
+		update_navigation_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
-		update_failsafe_desired(&cmd, &settings);
+		update_failsafe_desired(&cmd);
 		break;
 	default:
 		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_UNDEFINED);
@@ -917,102 +917,38 @@ static void update_actuator_desired(CarManualControlCommandData * cmd)
 	actuator.Steering = cmd->Roll;
 	actuator.Throttle = cmd->Pitch;
 
+	JLinkRTTPrintf(0, "Updating manual desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
+
 	CarActuatorDesiredSet(&actuator);
 }
 
 //! In navigation mode, set navigation desired
-static void update_navigation_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings)
+static void update_navigation_desired(CarManualControlCommandData * cmd)
 {
 	float servo_cmd, motor_cmd;
 	getCmdFromCAN(&servo_cmd, &motor_cmd);
 
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);
-	actuator.Roll = manual_control_command->Roll;
-	actuator.Pitch = manual_control_command->Pitch;
-	actuator.Yaw = manual_control_command->Yaw;
+	actuator.Roll = cmd->Roll;
+	actuator.Pitch = cmd->Pitch;
+	actuator.Yaw = cmd->Yaw;
 	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
 	actuator.Steering = servo_cmd;
 	actuator.Throttle = motor_cmd;
-	JLinkRTTPrintf(0, "cmd from CAN set: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
+	JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
 
 	CarActuatorDesiredSet(&actuator);
 }
 
-static void update_failsafe_desired(CarManualControlCommandData * manual_control_command, CarManualControlSettingsData * settings)
+static void update_failsafe_desired(CarManualControlCommandData * cmd)
 {
-	NavigationDesiredData navigation;
-	NavigationDesiredGet(&navigation);
-
-	NavigationSettingsData navSettings;
-	NavigationSettingsGet(&navSettings);
-										
-	const uint8_t NAVIGATION1_SETTINGS[3] = {  NAVIGATIONDESIRED_NAVIGATIONMODE_LINEFOLLOWING,
-										NAVIGATIONDESIRED_NAVIGATIONMODE_LINEFOLLOWING,
-										NAVIGATIONDESIRED_NAVIGATIONMODE_LINEFOLLOWING};	
-
-	const uint8_t FAILSAFE_SETTINGS[3] = {  NAVIGATIONDESIRED_NAVIGATIONMODE_FAILSAFE,
-                                          NAVIGATIONDESIRED_NAVIGATIONMODE_FAILSAFE,
-                                          NAVIGATIONDESIRED_NAVIGATIONMODE_FAILSAFE};
-
-	const uint8_t * nav_modes;
-
-	uint8_t reprojection = NAVIGATIONDESIRED_REPROJECTIONMODE_NONE;
-
-	uint8_t drivingMode;
-
-	DrivingStatusDrivingModeGet(&drivingMode);
-	switch(drivingMode) {
-		case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
-			nav_modes = NAVIGATION1_SETTINGS;
-			break;
-		case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
-			nav_modes = FAILSAFE_SETTINGS;
-			break;
-		default:
-			{
-				// Major error, this should not occur because only enter this block when one of these is true
-				set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_UNDEFINED);
-			}
-			return;
-	}
-
-	navigation.NavigationMode[NAVIGATIONDESIRED_NAVIGATIONMODE_ROLL]  = nav_modes[0];
-	navigation.NavigationMode[NAVIGATIONDESIRED_NAVIGATIONMODE_PITCH] = nav_modes[1];
-	navigation.NavigationMode[NAVIGATIONDESIRED_NAVIGATIONMODE_YAW]   = nav_modes[2];
-
-	navigation.Roll = scale_navigation(&navSettings,
-			manual_control_command->Roll,
-			nav_modes[NAVIGATIONDESIRED_NAVIGATIONMODE_ROLL],
-			NAVIGATIONDESIRED_NAVIGATIONMODE_ROLL);
-
-	navigation.Pitch = scale_navigation(&navSettings,
-			manual_control_command->Pitch,
-			nav_modes[NAVIGATIONDESIRED_NAVIGATIONMODE_PITCH],
-			NAVIGATIONDESIRED_NAVIGATIONMODE_PITCH);
-
-	navigation.Yaw = scale_navigation(&navSettings,
-			manual_control_command->Yaw,
-			nav_modes[NAVIGATIONDESIRED_NAVIGATIONMODE_YAW],
-			NAVIGATIONDESIRED_NAVIGATIONMODE_YAW);
-
-	// get thrust source; normalize_positive = false since we just want to pass the value through
-	navigation.Thrust = manual_control_command->Throttle;
-
-	// for non-helicp, negative thrust is a special flag to stop the motors
-	if(navigation.Thrust < 0 ) navigation.Thrust = -1;
-
-	// Set the reprojection.
-	navigation.ReprojectionMode = reprojection;
-
-	NavigationDesiredSet(&navigation);
-
 	// TODO : FOR TEST ONLY
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);
-	actuator.Roll = manual_control_command->Roll;
-	actuator.Pitch = manual_control_command->Pitch;
-	actuator.Yaw = manual_control_command->Yaw;
+	actuator.Roll = cmd->Roll;
+	actuator.Pitch = cmd->Pitch;
+	actuator.Yaw = cmd->Yaw;
 	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
 	actuator.Steering = 0;
 	actuator.Throttle = 0;
