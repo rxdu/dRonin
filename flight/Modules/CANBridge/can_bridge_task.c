@@ -20,9 +20,11 @@ void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struc
 #endif
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
+
+#define FAILSAFE_TIMEOUT_MS 1
 #define UAVCAN_SPIN_TIME 3
 #define UPDATE_PERIOD_MS (5-UAVCAN_SPIN_TIME)
-#define FAILSAFE_TIMEOUT_MS 10
+#define UPDATE_PERIOD_US 5000
 
 #define CAN_RX_TIMEOUT_MS 10
 #define CAN_CMD_QUEUE_LEN 2
@@ -126,6 +128,8 @@ static void canBridgeTask(void *parameters)
 
     while (1)
 	{
+		uint32_t start_time = PIOS_DELAY_GetuS();
+
 		bool sensor_updated = true;
 		bool gyroTimeout  = PIOS_Queue_Receive(gyroQueue, &ev, FAILSAFE_TIMEOUT_MS) != true;
 		bool accelTimeout = PIOS_Queue_Receive(accelQueue, &ev, 1) != true;
@@ -157,7 +161,12 @@ static void canBridgeTask(void *parameters)
 
 		CANBridge_UpdateComm(sensor_updated, &gyro_can, &accel_can, &speed, UAVCAN_SPIN_TIME);
 		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
-		PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
+		// PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
+		
+		uint32_t spent_time = PIOS_DELAY_GetuSSince(start_time);
+		if(spent_time < UPDATE_PERIOD_US)
+			PIOS_DELAY_WaituS(UPDATE_PERIOD_US - spent_time);
+		
     }
 }
 
