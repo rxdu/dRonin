@@ -426,6 +426,8 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 		TIM_ClearITPendingBit(timer, TIM_IT_Update);
 		overflow_count = timer->ARR;
 		overflow_event = true;
+		// set sensor reading as 0 if timer overflows
+		hall_sensor_reading = 0;
 	} else {
 		overflow_count = 0;
 		overflow_event = false;

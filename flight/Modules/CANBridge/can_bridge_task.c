@@ -10,7 +10,7 @@
 #include "jlink_rtt.h"
 
 bool CANBridge_InitComm();
-void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed);
+void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed, int32_t spin_timeout);
 
 // Private constants
 #if defined(PIOS_MANUAL_STACK_SIZE)
@@ -20,7 +20,8 @@ void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struc
 #endif
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
-#define UPDATE_PERIOD_MS 5
+#define UAVCAN_SPIN_TIME 3
+#define UPDATE_PERIOD_MS (5-UAVCAN_SPIN_TIME)
 #define FAILSAFE_TIMEOUT_MS 10
 
 #define CAN_RX_TIMEOUT_MS 10
@@ -154,7 +155,7 @@ static void canBridgeTask(void *parameters)
 		// Send latest speed measurement
 		float speed = calcCarSpeed();
 
-		CANBridge_UpdateComm(sensor_updated, &gyro_can, &accel_can, &speed);
+		CANBridge_UpdateComm(sensor_updated, &gyro_can, &accel_can, &speed, UAVCAN_SPIN_TIME);
 		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 		PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
     }

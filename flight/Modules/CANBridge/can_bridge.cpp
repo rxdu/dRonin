@@ -12,10 +12,10 @@ extern "C" bool CANBridge_InitComm()
     return CANBridge::instance().started_;
 }
 
-extern "C" void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed)
+extern "C" void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed, int32_t spin_timeout)
 {
     // SEGGER_RTT_WriteString(0, "Update can bridge\n");
-    CANBridge::instance().updateComm(sensor_updated, gyro, accel, speed);
+    CANBridge::instance().updateComm(sensor_updated, gyro, accel, speed, spin_timeout);
 }
 
 CANBridge::CANBridge():
@@ -67,9 +67,9 @@ CANBridge::CANBridge():
     can_node_.setModeOperational();    
 }
 
-void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed)
+void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed, int32_t spin_timeout)
 {
-    const int spin_res = can_node_.spin(uavcan::MonotonicDuration::fromMSec(3));
+    const int spin_res = can_node_.spin(uavcan::MonotonicDuration::fromMSec(spin_timeout));
     if (spin_res < 0)
     {
         SEGGER_RTT_WriteString(0, "Transient failure \n");

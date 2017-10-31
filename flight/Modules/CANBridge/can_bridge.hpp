@@ -32,7 +32,7 @@ public:
         return can_bridge;
     };
 
-    void updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed);
+    void updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed, int32_t spin_timeout);
 };
 
 #endif /* MODULES_CAN_BRIDGE_HPP */
