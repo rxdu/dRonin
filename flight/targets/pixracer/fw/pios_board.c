@@ -205,6 +205,8 @@ void PIOS_Board_Init(void)
 #if defined(PIOS_INCLUDE_HMC5983)
 	if( PIOS_HMC5983_Init(pios_spi_gyro_accel_mag_id, 1, &pios_hmc5983_internal_cfg) != 0)
 		PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_MAG);
+	else
+		JLinkWriteString(0, "HMC5983 init successful\n");
 #endif
 }
 

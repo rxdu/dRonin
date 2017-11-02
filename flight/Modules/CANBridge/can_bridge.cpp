@@ -119,7 +119,7 @@ void CANBridge::updateComm(struct CANIMURawData *imu_data, float *speed, int32_t
         (void)mag_pub_res;
     }
 
-    pixcar::CarSpeed spd_msg;
+    pixcar::CarRawSpeed spd_msg;
     spd_msg.speed = *speed;
     const int spd_pub_res = spd_pub_.broadcast(spd_msg);
     (void)spd_pub_res;

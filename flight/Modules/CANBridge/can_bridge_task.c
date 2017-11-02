@@ -23,7 +23,7 @@ void CANBridge_UpdateComm(struct CANIMURawData *imu_data, float * speed, int32_t
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
 
 #define FAILSAFE_TIMEOUT_MS 1
-#define UAVCAN_SPIN_TIME 3
+#define UAVCAN_SPIN_TIME 2
 #define UPDATE_PERIOD_MS (5-UAVCAN_SPIN_TIME)
 #define UPDATE_PERIOD_US 5000
 
@@ -83,7 +83,7 @@ int32_t CANBridgeStart()
 	// Create the queues for the sensors
 	gyroQueue = PIOS_Queue_Create(1, sizeof(UAVObjEvent));
 	accelQueue = PIOS_Queue_Create(1, sizeof(UAVObjEvent));
-	magQueue = PIOS_Queue_Create(2, sizeof(UAVObjEvent));
+	magQueue = PIOS_Queue_Create(1, sizeof(UAVObjEvent));
 
 	GyrosConnectQueue(gyroQueue);
 	AccelsConnectQueue(accelQueue);
@@ -175,16 +175,24 @@ static void canBridgeTask(void *parameters)
 			imu_raw.accel.y = accelsData.y;
 			imu_raw.accel.z = accelsData.z;
 		}
-
+		else
+		{	
+			imu_raw.gyro_accel_updated = false;
+		}
+		
 		if(PIOS_Queue_Receive(magQueue, &ev, 1))
 		{
 			MagnetometerGet(&magData);
 
 			imu_raw.mag_updated = true;
 
-			imu_raw.accel.x = accelsData.x;
-			imu_raw.accel.y = accelsData.y;
-			imu_raw.accel.z = accelsData.z;
+			imu_raw.mag.x = magData.x;
+			imu_raw.mag.y = magData.y;
+			imu_raw.mag.z = magData.z;
+		}
+		else 
+		{
+			imu_raw.mag_updated = false;
 		}
 
 		// Send latest speed measurement
