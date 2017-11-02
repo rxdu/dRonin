@@ -165,7 +165,7 @@ pios_spi_t pios_spi_baro_id;
 /* SPI1 Interface
  *      - Used for gyro communications
  */
-static const struct pios_spi_cfg pios_spi_gyro_accel_cfg = {
+static const struct pios_spi_cfg pios_spi_gyro_accel_mag_cfg = {
 	.regs = SPI1,
 	.remap = GPIO_AF_SPI1,
 	.init = {
@@ -249,7 +249,7 @@ static const struct pios_spi_cfg pios_spi_gyro_accel_cfg = {
 	}},
 };
 
-pios_spi_t pios_spi_gyro_accel_id;
+pios_spi_t pios_spi_gyro_accel_mag_id;
 
 #endif	/* PIOS_INCLUDE_SPI */
 

@@ -76,6 +76,7 @@
         "shared_mutex": "cpp",
         "typeindex": "cpp",
         "*.ipp": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "pios_hmc5983.h": "c"
     }
 }
