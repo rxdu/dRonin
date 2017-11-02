@@ -7,6 +7,7 @@ extern "C" {
 
 #include "pios_uavcan.hpp"
 #include <pixcar/CarRawIMU.hpp>
+#include <pixcar/CarRawMag.hpp>
 #include <pixcar/CarSpeed.hpp>
 #include <pixcar/CarCommand.hpp>
 
@@ -19,6 +20,7 @@ class CANBridge
     uavcan::Node<NodeMemoryPoolSize> can_node_;
     
     uavcan::Publisher<pixcar::CarRawIMU> imu_pub_;
+    uavcan::Publisher<pixcar::CarRawMag> mag_pub_;
     uavcan::Publisher<pixcar::CarSpeed> spd_pub_;
     uavcan::Subscriber<pixcar::CarCommand> cmd_sub_;
 
@@ -32,7 +34,7 @@ public:
         return can_bridge;
     };
 
-    void updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed, int32_t spin_timeout);
+    void updateComm(struct CANIMURawData *imu_data, float *speed, int32_t spin_timeout);
 };
 
 #endif /* MODULES_CAN_BRIDGE_HPP */

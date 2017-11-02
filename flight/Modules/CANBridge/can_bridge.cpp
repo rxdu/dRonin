@@ -12,16 +12,17 @@ extern "C" bool CANBridge_InitComm()
     return CANBridge::instance().started_;
 }
 
-extern "C" void CANBridge_UpdateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed, int32_t spin_timeout)
+extern "C" void CANBridge_UpdateComm(struct CANIMURawData *imu_data, float *speed, int32_t spin_timeout)
 {
     // SEGGER_RTT_WriteString(0, "Update can bridge\n");
-    CANBridge::instance().updateComm(sensor_updated, gyro, accel, speed, spin_timeout);
+    CANBridge::instance().updateComm(imu_data, speed, spin_timeout);
 }
 
 CANBridge::CANBridge():
     can_node_(pios_uavcan::PIOSUAVCANDriver::instance(),
         pios_uavcan::PIOSUAVCANClock::instance()),
     imu_pub_(can_node_),
+    mag_pub_(can_node_),
     spd_pub_(can_node_),
     cmd_sub_(can_node_),
     started_(false)
@@ -42,6 +43,14 @@ CANBridge::CANBridge():
         SEGGER_RTT_WriteString(0, "Publisher IMU init successfully\n");
     imu_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
     imu_pub_.setPriority(uavcan::TransferPriority::OneLowerThanHighest);    
+
+    const int mag_pub_init_res = mag_pub_.init();
+    if (mag_pub_init_res < 0)
+        SEGGER_RTT_WriteString(0, "Failed to init MAG publisher\n");
+    else
+        SEGGER_RTT_WriteString(0, "Publisher MAG init successfully\n");
+    mag_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(1000));
+    mag_pub_.setPriority(uavcan::TransferPriority::OneLowerThanHighest);    
 
     const int spd_pub_init_res = spd_pub_.init();
     if (spd_pub_init_res < 0)
@@ -67,7 +76,7 @@ CANBridge::CANBridge():
     can_node_.setModeOperational();    
 }
 
-void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, struct CANIMURawData *accel, float * speed, int32_t spin_timeout)
+void CANBridge::updateComm(struct CANIMURawData *imu_data, float *speed, int32_t spin_timeout)
 {
     const int spin_res = can_node_.spin(uavcan::MonotonicDuration::fromMSec(spin_timeout));
     if (spin_res < 0)
@@ -76,24 +85,16 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
     }
     // can_node_.spinOnce();
 
-    if(sensor_updated)
+    if(imu_data->gyro_accel_updated)
     {
         pixcar::CarRawIMU imu_msg;  // Always zero initialized
-        imu_msg.gyro[0] = gyro->x;
-        imu_msg.gyro[1] = gyro->y;
-        imu_msg.gyro[2] = gyro->z;
+        imu_msg.gyro[0] = imu_data->gyro.x;
+        imu_msg.gyro[1] = imu_data->gyro.y;
+        imu_msg.gyro[2] = imu_data->gyro.z;
 
-        imu_msg.accel[0] = accel->x;
-        imu_msg.accel[1] = accel->y;
-        imu_msg.accel[2] = accel->z;
-
-        // imu_msg.gyro[0] = (float)0.1;
-        // imu_msg.gyro[1] = (float)0.2;
-        // imu_msg.gyro[2] = (float)0.3;
-
-        // imu_msg.accel[0] = (float)0.4;
-        // imu_msg.accel[1] = (float)0.5;
-        // imu_msg.accel[2] = (float)0.6;
+        imu_msg.accel[0] = imu_data->accel.x;
+        imu_msg.accel[1] = imu_data->accel.y;
+        imu_msg.accel[2] = imu_data->accel.z;
 
         const int imu_pub_res = imu_pub_.broadcast(imu_msg);
         (void)imu_pub_res;
@@ -105,6 +106,17 @@ void CANBridge::updateComm(bool sensor_updated, struct CANIMURawData *gyro, stru
         // {
         //     SEGGER_RTT_WriteString(0, "IMU msg sent successfully\n");
         // }
+    }
+
+    if(imu_data->mag_updated)
+    {
+        pixcar::CarRawMag mag_msg;  
+        mag_msg.mag[0] = imu_data->mag.x;
+        mag_msg.mag[1] = imu_data->mag.y;
+        mag_msg.mag[2] = imu_data->mag.z;
+
+        const int mag_pub_res = mag_pub_.broadcast(mag_msg);
+        (void)mag_pub_res;
     }
 
     pixcar::CarSpeed spd_msg;
