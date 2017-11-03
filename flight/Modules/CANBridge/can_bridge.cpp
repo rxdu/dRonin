@@ -3,6 +3,7 @@
 extern "C" {
     #include "jlink_rtt.h"
     #include "can_bridge_task.h"
+    uint32_t PIOS_Thread_Systime(void);    
 }
 
 extern "C" void updateCmdFromCAN(float servo_cmd, float motor_cmd);
@@ -78,6 +79,8 @@ CANBridge::CANBridge():
 
 void CANBridge::updateComm(struct CANIMURawData *imu_data, float *speed, int32_t spin_timeout)
 {
+    uint32_t time_stamp = PIOS_Thread_Systime();
+
     const int spin_res = can_node_.spin(uavcan::MonotonicDuration::fromMSec(spin_timeout));
     if (spin_res < 0)
     {
@@ -88,6 +91,8 @@ void CANBridge::updateComm(struct CANIMURawData *imu_data, float *speed, int32_t
     if(imu_data->gyro_accel_updated)
     {
         pixcar::CarRawIMU imu_msg;  // Always zero initialized
+        
+        imu_msg.time_stamp = time_stamp;
         imu_msg.gyro[0] = imu_data->gyro.x;
         imu_msg.gyro[1] = imu_data->gyro.y;
         imu_msg.gyro[2] = imu_data->gyro.z;
@@ -111,6 +116,8 @@ void CANBridge::updateComm(struct CANIMURawData *imu_data, float *speed, int32_t
     if(imu_data->mag_updated)
     {
         pixcar::CarRawMag mag_msg;  
+
+        mag_msg.time_stamp = time_stamp;
         mag_msg.mag[0] = imu_data->mag.x;
         mag_msg.mag[1] = imu_data->mag.y;
         mag_msg.mag[2] = imu_data->mag.z;
@@ -120,6 +127,7 @@ void CANBridge::updateComm(struct CANIMURawData *imu_data, float *speed, int32_t
     }
 
     pixcar::CarRawSpeed spd_msg;
+    spd_msg.time_stamp = time_stamp;
     spd_msg.speed = *speed;
     const int spd_pub_res = spd_pub_.broadcast(spd_msg);
     (void)spd_pub_res;

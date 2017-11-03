@@ -15,16 +15,19 @@
 
 /******************************* Source text **********************************
 # 4-byte float
+uint32 time_stamp
 float32[3] gyro
 float32[3] accel
 ******************************************************************************/
 
 /********************* DSDL signature source definition ***********************
 pixcar.CarRawIMU
+saturated uint32 time_stamp
 saturated float32[3] gyro
 saturated float32[3] accel
 ******************************************************************************/
 
+#undef time_stamp
 #undef gyro
 #undef accel
 
@@ -43,6 +46,7 @@ struct UAVCAN_EXPORT CarRawIMU_
 
     struct FieldTypes
     {
+        typedef ::uavcan::IntegerSpec< 32, ::uavcan::SignednessUnsigned, ::uavcan::CastModeSaturate > time_stamp;
         typedef ::uavcan::Array< ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate >, ::uavcan::ArrayModeStatic, 3 > gyro;
         typedef ::uavcan::Array< ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate >, ::uavcan::ArrayModeStatic, 3 > accel;
     };
@@ -50,25 +54,29 @@ struct UAVCAN_EXPORT CarRawIMU_
     enum
     {
         MinBitLen
-            = FieldTypes::gyro::MinBitLen
+            = FieldTypes::time_stamp::MinBitLen
+            + FieldTypes::gyro::MinBitLen
             + FieldTypes::accel::MinBitLen
     };
 
     enum
     {
         MaxBitLen
-            = FieldTypes::gyro::MaxBitLen
+            = FieldTypes::time_stamp::MaxBitLen
+            + FieldTypes::gyro::MaxBitLen
             + FieldTypes::accel::MaxBitLen
     };
 
     // Constants
 
     // Fields
+    typename ::uavcan::StorageType< typename FieldTypes::time_stamp >::Type time_stamp;
     typename ::uavcan::StorageType< typename FieldTypes::gyro >::Type gyro;
     typename ::uavcan::StorageType< typename FieldTypes::accel >::Type accel;
 
     CarRawIMU_()
-        : gyro()
+        : time_stamp()
+        , gyro()
         , accel()
     {
         ::uavcan::StaticAssert<_tmpl == 0>::check();  // Usage check
@@ -79,7 +87,7 @@ struct UAVCAN_EXPORT CarRawIMU_
          * This check shall never be performed in user code because MaxBitLen value
          * actually depends on the nested types, thus it is not invariant.
          */
-        ::uavcan::StaticAssert<192 == MaxBitLen>::check();
+        ::uavcan::StaticAssert<224 == MaxBitLen>::check();
 #endif
     }
 
@@ -126,6 +134,7 @@ template <int _tmpl>
 bool CarRawIMU_<_tmpl>::operator==(ParameterType rhs) const
 {
     return
+        time_stamp == rhs.time_stamp &&
         gyro == rhs.gyro &&
         accel == rhs.accel;
 }
@@ -134,6 +143,7 @@ template <int _tmpl>
 bool CarRawIMU_<_tmpl>::isClose(ParameterType rhs) const
 {
     return
+        ::uavcan::areClose(time_stamp, rhs.time_stamp) &&
         ::uavcan::areClose(gyro, rhs.gyro) &&
         ::uavcan::areClose(accel, rhs.accel);
 }
@@ -146,6 +156,11 @@ int CarRawIMU_<_tmpl>::encode(ParameterType self, ::uavcan::ScalarCodec& codec,
     (void)codec;
     (void)tao_mode;
     int res = 1;
+    res = FieldTypes::time_stamp::encode(self.time_stamp, codec,  ::uavcan::TailArrayOptDisabled);
+    if (res <= 0)
+    {
+        return res;
+    }
     res = FieldTypes::gyro::encode(self.gyro, codec,  ::uavcan::TailArrayOptDisabled);
     if (res <= 0)
     {
@@ -163,6 +178,11 @@ int CarRawIMU_<_tmpl>::decode(ReferenceType self, ::uavcan::ScalarCodec& codec,
     (void)codec;
     (void)tao_mode;
     int res = 1;
+    res = FieldTypes::time_stamp::decode(self.time_stamp, codec,  ::uavcan::TailArrayOptDisabled);
+    if (res <= 0)
+    {
+        return res;
+    }
     res = FieldTypes::gyro::decode(self.gyro, codec,  ::uavcan::TailArrayOptDisabled);
     if (res <= 0)
     {
@@ -178,8 +198,9 @@ int CarRawIMU_<_tmpl>::decode(ReferenceType self, ::uavcan::ScalarCodec& codec,
 template <int _tmpl>
 ::uavcan::DataTypeSignature CarRawIMU_<_tmpl>::getDataTypeSignature()
 {
-    ::uavcan::DataTypeSignature signature(0x1C6B46151D291028ULL);
+    ::uavcan::DataTypeSignature signature(0x938CF09578C5A762ULL);
 
+    FieldTypes::time_stamp::extendDataTypeSignature(signature);
     FieldTypes::gyro::extendDataTypeSignature(signature);
     FieldTypes::accel::extendDataTypeSignature(signature);
 
@@ -231,6 +252,13 @@ void YamlStreamer< ::pixcar::CarRawIMU >::stream(Stream& s, ::pixcar::CarRawIMU:
         {
             s << "  ";
         }
+    }
+    s << "time_stamp: ";
+    YamlStreamer< ::pixcar::CarRawIMU::FieldTypes::time_stamp >::stream(s, obj.time_stamp, level + 1);
+    s << '\n';
+    for (int pos = 0; pos < level; pos++)
+    {
+        s << "  ";
     }
     s << "gyro: ";
     YamlStreamer< ::pixcar::CarRawIMU::FieldTypes::gyro >::stream(s, obj.gyro, level + 1);

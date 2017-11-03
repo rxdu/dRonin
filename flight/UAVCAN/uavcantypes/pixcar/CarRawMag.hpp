@@ -15,14 +15,17 @@
 
 /******************************* Source text **********************************
 # 4-byte float
+uint32 time_stamp
 float32[3] mag
 ******************************************************************************/
 
 /********************* DSDL signature source definition ***********************
 pixcar.CarRawMag
+saturated uint32 time_stamp
 saturated float32[3] mag
 ******************************************************************************/
 
+#undef time_stamp
 #undef mag
 
 namespace pixcar
@@ -40,28 +43,33 @@ struct UAVCAN_EXPORT CarRawMag_
 
     struct FieldTypes
     {
+        typedef ::uavcan::IntegerSpec< 32, ::uavcan::SignednessUnsigned, ::uavcan::CastModeSaturate > time_stamp;
         typedef ::uavcan::Array< ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate >, ::uavcan::ArrayModeStatic, 3 > mag;
     };
 
     enum
     {
         MinBitLen
-            = FieldTypes::mag::MinBitLen
+            = FieldTypes::time_stamp::MinBitLen
+            + FieldTypes::mag::MinBitLen
     };
 
     enum
     {
         MaxBitLen
-            = FieldTypes::mag::MaxBitLen
+            = FieldTypes::time_stamp::MaxBitLen
+            + FieldTypes::mag::MaxBitLen
     };
 
     // Constants
 
     // Fields
+    typename ::uavcan::StorageType< typename FieldTypes::time_stamp >::Type time_stamp;
     typename ::uavcan::StorageType< typename FieldTypes::mag >::Type mag;
 
     CarRawMag_()
-        : mag()
+        : time_stamp()
+        , mag()
     {
         ::uavcan::StaticAssert<_tmpl == 0>::check();  // Usage check
 
@@ -71,7 +79,7 @@ struct UAVCAN_EXPORT CarRawMag_
          * This check shall never be performed in user code because MaxBitLen value
          * actually depends on the nested types, thus it is not invariant.
          */
-        ::uavcan::StaticAssert<96 == MaxBitLen>::check();
+        ::uavcan::StaticAssert<128 == MaxBitLen>::check();
 #endif
     }
 
@@ -118,6 +126,7 @@ template <int _tmpl>
 bool CarRawMag_<_tmpl>::operator==(ParameterType rhs) const
 {
     return
+        time_stamp == rhs.time_stamp &&
         mag == rhs.mag;
 }
 
@@ -125,6 +134,7 @@ template <int _tmpl>
 bool CarRawMag_<_tmpl>::isClose(ParameterType rhs) const
 {
     return
+        ::uavcan::areClose(time_stamp, rhs.time_stamp) &&
         ::uavcan::areClose(mag, rhs.mag);
 }
 
@@ -136,6 +146,11 @@ int CarRawMag_<_tmpl>::encode(ParameterType self, ::uavcan::ScalarCodec& codec,
     (void)codec;
     (void)tao_mode;
     int res = 1;
+    res = FieldTypes::time_stamp::encode(self.time_stamp, codec,  ::uavcan::TailArrayOptDisabled);
+    if (res <= 0)
+    {
+        return res;
+    }
     res = FieldTypes::mag::encode(self.mag, codec,  tao_mode);
     return res;
 }
@@ -148,6 +163,11 @@ int CarRawMag_<_tmpl>::decode(ReferenceType self, ::uavcan::ScalarCodec& codec,
     (void)codec;
     (void)tao_mode;
     int res = 1;
+    res = FieldTypes::time_stamp::decode(self.time_stamp, codec,  ::uavcan::TailArrayOptDisabled);
+    if (res <= 0)
+    {
+        return res;
+    }
     res = FieldTypes::mag::decode(self.mag, codec,  tao_mode);
     return res;
 }
@@ -158,8 +178,9 @@ int CarRawMag_<_tmpl>::decode(ReferenceType self, ::uavcan::ScalarCodec& codec,
 template <int _tmpl>
 ::uavcan::DataTypeSignature CarRawMag_<_tmpl>::getDataTypeSignature()
 {
-    ::uavcan::DataTypeSignature signature(0xEDB2E1222169C3B1ULL);
+    ::uavcan::DataTypeSignature signature(0xC950CD0CDB7EAD62ULL);
 
+    FieldTypes::time_stamp::extendDataTypeSignature(signature);
     FieldTypes::mag::extendDataTypeSignature(signature);
 
     return signature;
@@ -210,6 +231,13 @@ void YamlStreamer< ::pixcar::CarRawMag >::stream(Stream& s, ::pixcar::CarRawMag:
         {
             s << "  ";
         }
+    }
+    s << "time_stamp: ";
+    YamlStreamer< ::pixcar::CarRawMag::FieldTypes::time_stamp >::stream(s, obj.time_stamp, level + 1);
+    s << '\n';
+    for (int pos = 0; pos < level; pos++)
+    {
+        s << "  ";
     }
     s << "mag: ";
     YamlStreamer< ::pixcar::CarRawMag::FieldTypes::mag >::stream(s, obj.mag, level + 1);

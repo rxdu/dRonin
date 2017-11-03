@@ -14,15 +14,18 @@
 #include <uavcan/marshal/types.hpp>
 
 /******************************* Source text **********************************
+uint32 time_stamp
 # 4-byte float
 float32 speed
 ******************************************************************************/
 
 /********************* DSDL signature source definition ***********************
 pixcar.CarRawSpeed
+saturated uint32 time_stamp
 saturated float32 speed
 ******************************************************************************/
 
+#undef time_stamp
 #undef speed
 
 namespace pixcar
@@ -40,28 +43,33 @@ struct UAVCAN_EXPORT CarRawSpeed_
 
     struct FieldTypes
     {
+        typedef ::uavcan::IntegerSpec< 32, ::uavcan::SignednessUnsigned, ::uavcan::CastModeSaturate > time_stamp;
         typedef ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate > speed;
     };
 
     enum
     {
         MinBitLen
-            = FieldTypes::speed::MinBitLen
+            = FieldTypes::time_stamp::MinBitLen
+            + FieldTypes::speed::MinBitLen
     };
 
     enum
     {
         MaxBitLen
-            = FieldTypes::speed::MaxBitLen
+            = FieldTypes::time_stamp::MaxBitLen
+            + FieldTypes::speed::MaxBitLen
     };
 
     // Constants
 
     // Fields
+    typename ::uavcan::StorageType< typename FieldTypes::time_stamp >::Type time_stamp;
     typename ::uavcan::StorageType< typename FieldTypes::speed >::Type speed;
 
     CarRawSpeed_()
-        : speed()
+        : time_stamp()
+        , speed()
     {
         ::uavcan::StaticAssert<_tmpl == 0>::check();  // Usage check
 
@@ -71,7 +79,7 @@ struct UAVCAN_EXPORT CarRawSpeed_
          * This check shall never be performed in user code because MaxBitLen value
          * actually depends on the nested types, thus it is not invariant.
          */
-        ::uavcan::StaticAssert<32 == MaxBitLen>::check();
+        ::uavcan::StaticAssert<64 == MaxBitLen>::check();
 #endif
     }
 
@@ -118,6 +126,7 @@ template <int _tmpl>
 bool CarRawSpeed_<_tmpl>::operator==(ParameterType rhs) const
 {
     return
+        time_stamp == rhs.time_stamp &&
         speed == rhs.speed;
 }
 
@@ -125,6 +134,7 @@ template <int _tmpl>
 bool CarRawSpeed_<_tmpl>::isClose(ParameterType rhs) const
 {
     return
+        ::uavcan::areClose(time_stamp, rhs.time_stamp) &&
         ::uavcan::areClose(speed, rhs.speed);
 }
 
@@ -136,6 +146,11 @@ int CarRawSpeed_<_tmpl>::encode(ParameterType self, ::uavcan::ScalarCodec& codec
     (void)codec;
     (void)tao_mode;
     int res = 1;
+    res = FieldTypes::time_stamp::encode(self.time_stamp, codec,  ::uavcan::TailArrayOptDisabled);
+    if (res <= 0)
+    {
+        return res;
+    }
     res = FieldTypes::speed::encode(self.speed, codec,  tao_mode);
     return res;
 }
@@ -148,6 +163,11 @@ int CarRawSpeed_<_tmpl>::decode(ReferenceType self, ::uavcan::ScalarCodec& codec
     (void)codec;
     (void)tao_mode;
     int res = 1;
+    res = FieldTypes::time_stamp::decode(self.time_stamp, codec,  ::uavcan::TailArrayOptDisabled);
+    if (res <= 0)
+    {
+        return res;
+    }
     res = FieldTypes::speed::decode(self.speed, codec,  tao_mode);
     return res;
 }
@@ -158,8 +178,9 @@ int CarRawSpeed_<_tmpl>::decode(ReferenceType self, ::uavcan::ScalarCodec& codec
 template <int _tmpl>
 ::uavcan::DataTypeSignature CarRawSpeed_<_tmpl>::getDataTypeSignature()
 {
-    ::uavcan::DataTypeSignature signature(0xF12D95E3FF243D25ULL);
+    ::uavcan::DataTypeSignature signature(0x2B8C0B8A6F7D0B40ULL);
 
+    FieldTypes::time_stamp::extendDataTypeSignature(signature);
     FieldTypes::speed::extendDataTypeSignature(signature);
 
     return signature;
@@ -210,6 +231,13 @@ void YamlStreamer< ::pixcar::CarRawSpeed >::stream(Stream& s, ::pixcar::CarRawSp
         {
             s << "  ";
         }
+    }
+    s << "time_stamp: ";
+    YamlStreamer< ::pixcar::CarRawSpeed::FieldTypes::time_stamp >::stream(s, obj.time_stamp, level + 1);
+    s << '\n';
+    for (int pos = 0; pos < level; pos++)
+    {
+        s << "  ";
     }
     s << "speed: ";
     YamlStreamer< ::pixcar::CarRawSpeed::FieldTypes::speed >::stream(s, obj.speed, level + 1);
