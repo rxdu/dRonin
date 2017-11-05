@@ -58,11 +58,12 @@ extern pios_i2c_t external_i2c_adapter_id;
 #include "magnetometer.h"
 #include "magbias.h"
 #include "coordinate_conversions.h"
+#include "hallsensor.h"
 
 // Private constants
 #define STACK_SIZE_BYTES 1000
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
-#define SENSOR_PERIOD 6		// this allows sensor data to arrive as slow as 166Hz
+#define SENSOR_PERIOD 5		// this allows sensor data to arrive as slow as 166Hz->200Hz
 #define REQUIRED_GOOD_CYCLES 50
 #define MAX_TIME_BETWEEN_VALID_BARO_DATAS_MS 100*1000  // we allow a pause time of 100 ms between two valid
                                                        // temperature/barometer dataa
@@ -148,7 +149,8 @@ int32_t SensorsInitialize(void)
 		|| MagBiasInitialize() == -1 \
 		|| AttitudeSettingsInitialize() == -1 \
 		|| SensorSettingsInitialize() == -1 \
-		|| INSSettingsInitialize() == -1) {
+		|| INSSettingsInitialize() == -1 \
+		|| HallSensorInitialize() == -1) {
 
 		return -1;
 	}

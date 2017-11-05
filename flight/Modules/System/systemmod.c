@@ -44,13 +44,11 @@
 #include "morsel.h"
 
 #include "annunciatorsettings.h"
-#include "flightstatus.h"
-#include "manualcontrolcommand.h"
-#include "manualcontrolsettings.h"
+#include "drivingstatus.h"
+#include "carmanualcontrolcommand.h"
+#include "carmanualcontrolsettings.h"
 #include "objectpersistence.h"
 #include "rfm22bstatus.h"
-#include "stabilizationsettings.h"
-#include "stateestimation.h"
 #include "systemsettings.h"
 #include "systemstats.h"
 #include "watchdogstatus.h"
@@ -65,6 +63,8 @@
 
 extern annuncdac_dev_t pios_dac_annunciator_id;
 #endif
+
+#include "jlink_rtt.h"
 
 #if defined(PIOS_INCLUDE_DEBUG_CONSOLE) && defined(DEBUG_THIS_FILE)
 #define DEBUG_MSG(format, ...) PIOS_COM_SendFormattedString(PIOS_COM_DEBUG, format, ## __VA_ARGS__)
@@ -84,7 +84,7 @@ extern annuncdac_dev_t pios_dac_annunciator_id;
 #define STACK_SIZE_BYTES 1024
 #endif
 
-#define TASK_PRIORITY PIOS_THREAD_PRIO_NORMAL
+#define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
 
 /* When we're blinking morse code, this works out to 10.6 WPM.  It's also
  * nice and relatively prime to most other rates of things, so we don't get
@@ -192,7 +192,6 @@ int32_t SystemModInitialize(void)
 
 	if (SystemSettingsInitialize() == -1
 			|| SystemStatsInitialize() == -1
-			|| FlightStatusInitialize() == -1
 			|| ObjectPersistenceInitialize() == -1
 			|| AnnunciatorSettingsInitialize() == -1
 #ifdef SYSTEMMOD_RGBLED_SUPPORT
@@ -218,6 +217,7 @@ int32_t SystemModInitialize(void)
 }
 
 MODULE_HIPRI_INITCALL(SystemModInitialize, SystemModStart)
+
 static void systemTask(void *parameters)
 {
 	if (PIOS_heap_malloc_failed_p()) {
@@ -245,14 +245,12 @@ static void systemTask(void *parameters)
 	configuration_check();
 
 	// Whenever the configuration changes, make sure it is safe to fly
-	if (StabilizationSettingsHandle())
-		StabilizationSettingsConnectCallback(configurationUpdatedCb);
 	if (SystemSettingsHandle())
 		SystemSettingsConnectCallback(configurationUpdatedCb);
-	if (ManualControlSettingsHandle())
-		ManualControlSettingsConnectCallback(configurationUpdatedCb);
-	if (FlightStatusHandle())
-		FlightStatusConnectCallback(configurationUpdatedCb);
+	if (CarManualControlSettingsHandle())
+		CarManualControlSettingsConnectCallback(configurationUpdatedCb);
+	if (DrivingStatusHandle())
+		DrivingStatusConnectCallback(configurationUpdatedCb);
 #endif
 
 	// Main system loop
@@ -265,6 +263,8 @@ static void systemTask(void *parameters)
 			// If object persistence is updated call the callback
 			objectUpdatedCb(&ev, NULL, NULL, 0);
 		}
+
+		JLinkRTTPrintf(0, "system task updated\n", 0);		
 	}
 }
 
@@ -447,7 +447,7 @@ static void systemPeriodicCb(UAVObjEvent *ev, void *ctx, void *obj_data, int len
 	static uint32_t blink_state = 0;
 	static uint8_t blink_prio = 0;
 	static bool ever_armed = false;
-	static uint8_t armed_status = FLIGHTSTATUS_ARMED_DISARMED;
+	static uint8_t armed_status = DRIVINGSTATUS_ARMED_DISARMED;
 	static bool is_manual_control = false;
 	static int morse;
 
@@ -480,9 +480,9 @@ static void systemPeriodicCb(UAVObjEvent *ev, void *ctx, void *obj_data, int len
 			}
 		}
 
-		FlightStatusArmedGet(&armed_status);
+		DrivingStatusArmedGet(&armed_status);
 
-		if (armed_status == FLIGHTSTATUS_ARMED_ARMED) {
+		if (armed_status == DRIVINGSTATUS_ARMED_ARMED) {
 			ever_armed = true;
 		} else {
 			if ((counter & 15) == 0) {
@@ -500,7 +500,7 @@ static void systemPeriodicCb(UAVObjEvent *ev, void *ctx, void *obj_data, int len
 
 		if ((blink_prio == 0) && (blink_state == 0)) {
 			// Nothing else to do-- show armed status
-			if (armed_status == FLIGHTSTATUS_ARMED_ARMED) {
+			if (armed_status == DRIVINGSTATUS_ARMED_ARMED) {
 				blink_string = "I";	// .. pairs of blinks.
 			} else {
 				blink_string = "T";	// - single long blinks
@@ -533,8 +533,8 @@ static void systemPeriodicCb(UAVObjEvent *ev, void *ctx, void *obj_data, int len
 
 		if (annunciatorSettings.ManualBuzzer !=
 				ANNUNCIATORSETTINGS_MANUALBUZZER_DISABLED) {
-			float acc[MANUALCONTROLCOMMAND_ACCESSORY_NUMELEM];
-			ManualControlCommandAccessoryGet(acc);
+			float acc[CARMANUALCONTROLCOMMAND_ACCESSORY_NUMELEM];
+			CarManualControlCommandAccessoryGet(acc);
 			/* DONT_BUILD_IF to protect this at end of file */
 			if (acc[annunciatorSettings.ManualBuzzer - 1] > 0.0f)
 				buzzer_prio = ANNUNCIATORSETTINGS_ANNUNCIATEANYTIME_HAIRONFIRE;
@@ -577,8 +577,8 @@ static void systemPeriodicCb(UAVObjEvent *ev, void *ctx, void *obj_data, int len
 
 #ifdef SYSTEMMOD_RGBLED_SUPPORT
 	systemmod_process_rgb_leds(led_override, morse > 0, blink_prio,
-		FLIGHTSTATUS_ARMED_DISARMED != armed_status,
-		(FLIGHTSTATUS_ARMED_ARMING == armed_status) &&
+		DRIVINGSTATUS_ARMED_DISARMED != armed_status,
+		(DRIVINGSTATUS_ARMED_ARMING == armed_status) &&
 		((counter & 3) < 2));
 #endif /* SYSTEMMOD_RGBLED_SUPPORT */
 
@@ -1082,7 +1082,7 @@ static uint32_t processPeriodicUpdates()
 }
 
 DONT_BUILD_IF(ANNUNCIATORSETTINGS_MANUALBUZZER_MAXOPTVAL >
-	MANUALCONTROLCOMMAND_ACCESSORY_NUMELEM, TooManyManualBuzzers);
+	CARMANUALCONTROLCOMMAND_ACCESSORY_NUMELEM, TooManyManualBuzzers);
 
 /**
  * @}

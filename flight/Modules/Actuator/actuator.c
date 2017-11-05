@@ -215,7 +215,7 @@ static void post_process_scale_and_commit(float *actuator_vect,
 		CarActuatorCommandGet(&command);
 	}
 
-	JLinkRTTPrintf(0, "Armed: %d, Actuator command servo-motor: %ld, %ld\n", armed, (uint32_t)command.Channel[0], (uint32_t)command.Channel[1]);
+	// JLinkRTTPrintf(0, "Armed: %d, Actuator command servo-motor: %ld, %ld\n", armed, (uint32_t)command.Channel[0], (uint32_t)command.Channel[1]);
 
 	for (int n = 0; n < MAX_MIX_ACTUATORS; ++n) {
 		PIOS_Servo_Set(n, command.Channel[n]);

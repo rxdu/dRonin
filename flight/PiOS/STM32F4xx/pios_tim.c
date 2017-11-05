@@ -35,10 +35,10 @@
 #include "pios_tim.h"
 #include "pios_tim_priv.h"
 
+#include "pixcar.h"
 #include "jlink_rtt.h"
 
 volatile static uint64_t time_mono = 0;
-volatile static uint16_t hall_sensor_reading = 0;
 
 enum pios_tim_dev_magic {
 	PIOS_TIM_DEV_MAGIC = 0x87654098,
@@ -400,13 +400,15 @@ static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
 	// JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
 }
 
-uint16_t PIOS_TIM_GetHallSensorReading()
-{
-	return hall_sensor_reading;
-}
-
+// uint16_t PIOS_TIM_GetHallSensorReading()
+// {
+// 	return hall_sensor_reading;
+// }
+ 
 static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 {
+	volatile static uint16_t hall_sensor_reading = 0;
+
 	/* Check for a trigger event on this timer */
 	bool trg_event;
 	if (TIM_GetITStatus(timer, TIM_IT_Trigger) == SET) {
@@ -414,6 +416,7 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 		TIM_ClearITPendingBit(timer, TIM_IT_Trigger);		
 		trg_event = true;
 		hall_sensor_reading = TIM_GetCapture1(timer);
+		updateHallSensorData(hall_sensor_reading);
 	} else {
 		trg_event = false;
 		hall_sensor_reading = 0;

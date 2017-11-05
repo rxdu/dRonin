@@ -41,7 +41,9 @@ MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl
+MODULES += UAVCANNode
 MODULES += CANBridge
+MODULES += PixCar
 #MODULES += Stabilization
 #MODULES += FirmwareIAP
 #MODULES += Telemetry
@@ -71,7 +73,7 @@ MODULES += CANBridge
 # OPTMODULES += UAVOCrossfireTelemetry
 
 # List of C++ Modules
-include $(FLIGHT)/Modules/CANBridge/mod_can_bridge.mk
+include $(FLIGHT)/Modules/UAVCANNode/pios_uavcan_node.mk
 
 # Paths
 OPUAVOBJINC = $(OPUAVOBJ)/inc
@@ -196,6 +198,7 @@ EXTRAINCDIRS  += $(MAVLINKINC)
 EXTRAINCDIRS += $(FLIGHT)/Modules/RTT
 EXTRAINCDIRS += $(FLIGHT)/Modules/TestTask
 EXTRAINCDIRS += $(FLIGHT)/Modules/CANBridge
+EXTRAINCDIRS += $(FLIGHT)/Modules/PixCar
 
 EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${OPTMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
 

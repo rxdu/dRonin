@@ -37,7 +37,7 @@
 #include "control.h"
 #include "transmitter_control.h"
 #include "pios_thread.h"
-#include "can_bridge_task.h"
+#include "uavcan_interface.h"
 
 #include "altitudeholddesired.h"
 #include "altitudeholdsettings.h"
@@ -462,14 +462,14 @@ int32_t transmitter_control_select(bool reset_controller)
 
 	switch(drivingMode) {
 	case DRIVINGSTATUS_DRIVINGMODE_MANUAL:
-		resetCmdFromCAN();
+		// resetCmdFromCAN();
 		update_actuator_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
 		update_navigation_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
-		resetCmdFromCAN();
+		// resetCmdFromCAN();
 		update_failsafe_desired(&cmd);
 		break;
 	default:
@@ -928,7 +928,9 @@ static void update_actuator_desired(CarManualControlCommandData * cmd)
 static void update_navigation_desired(CarManualControlCommandData * cmd)
 {
 	float servo_cmd, motor_cmd;
-	getCmdFromCAN(&servo_cmd, &motor_cmd);
+	servo_cmd = 0;
+	motor_cmd = 0;
+	// getCmdFromCAN(&servo_cmd, &motor_cmd);
 
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);

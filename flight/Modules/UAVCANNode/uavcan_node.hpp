@@ -1,17 +1,26 @@
-#ifndef MODULES_CAN_BRIDGE_HPP
-#define MODULES_CAN_BRIDGE_HPP
+/* 
+ * uavcan_node.hpp
+ * 
+ * Created on: Nov 04, 2017 17:08
+ * 
+ * Copyright (c) 2017 Ruixiang Du (rdu)
+ */ 
+
+#ifndef UAVCAN_NODE_HPP
+#define UAVCAN_NODE_HPP
 
 extern "C" {
-    #include "can_bridge_task.h"
+    #include "uavcan_interface.h"
 }
 
 #include "pios_uavcan.hpp"
+
 #include <pixcar/CarRawIMU.hpp>
 #include <pixcar/CarRawMag.hpp>
 #include <pixcar/CarRawSpeed.hpp>
 #include <pixcar/CarCommand.hpp>
 
-static constexpr unsigned NodeMemoryPoolSize = 2800;
+static constexpr unsigned NodeMemoryPoolSize = 4096;
 
 class UAVCANNode
 {
@@ -35,7 +44,10 @@ public:
     };
 
     void spinNode(int32_t spin_timeout);
-    void updateComm(struct CANIMURawData *imu_data, float *speed, int32_t spin_timeout);
+
+    void publishIMUData(struct CANIMURawData *imu_data);
+    void publishMagData(struct CANMagRawData *mag_data);
+    void publishSpeedData(struct CANSpeedRawData *spd_data);
 };
 
-#endif /* MODULES_CAN_BRIDGE_HPP */
+#endif /* UAVCAN_NODE_HPP */
