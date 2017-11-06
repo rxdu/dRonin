@@ -40,7 +40,7 @@ struct CANMagRawData
 struct CANSpeedRawData
 {
     uint32_t time_stamp;
-    float speed;
+    uint32_t speed;
 };
 
 #define IMU_MSG_PRIORITY    5

@@ -264,7 +264,7 @@ static void systemTask(void *parameters)
 			objectUpdatedCb(&ev, NULL, NULL, 0);
 		}
 
-		JLinkRTTPrintf(0, "system task updated\n", 0);		
+		// JLinkRTTPrintf(0, "system task updated\n", 0);		
 	}
 }
 

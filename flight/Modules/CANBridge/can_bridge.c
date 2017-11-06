@@ -229,10 +229,12 @@ static void canBridgeTask(void *parameters)
 				spd_raw.speed = hallData.count;
 				(void)spd_raw;
 				UAVCANNode_PublishSpeedData(&spd_raw);
+
+				JLinkRTTPrintf(0, "Speed: %ld\n",spd_raw.speed);
 			}
 		}
-		else
-			JLinkRTTPrintf(0, "No IMU data: %ld\n",0);
+		// else
+		// 	JLinkRTTPrintf(0, "No speed data: %ld\n",0);
 		
 		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 		// PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
