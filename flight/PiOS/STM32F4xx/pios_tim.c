@@ -405,21 +405,26 @@ static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
 // 	return hall_sensor_reading;
 // }
  
+static struct pios_queue *hallsensor_queue;
+static struct pios_sensor_hallsensor_data hall_data;
+
 static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 {
-	volatile static uint16_t hall_sensor_reading = 0;
-
+	// volatile static uint16_t hall_sensor_reading = 0;
+	
 	/* Check for a trigger event on this timer */
 	bool trg_event;
 	if (TIM_GetITStatus(timer, TIM_IT_Trigger) == SET) {
 		/* Read the current counter */
 		TIM_ClearITPendingBit(timer, TIM_IT_Trigger);		
 		trg_event = true;
-		hall_sensor_reading = TIM_GetCapture1(timer);
-		updateHallSensorData(hall_sensor_reading);
+		// hall_sensor_reading = TIM_GetCapture1(timer);
+		hallsensor_queue = PIXCAR_GetHallSensorQueue();
+		hall_data.count = TIM_GetCapture1(timer);
+		PIOS_Queue_Send(hallsensor_queue, &hall_data, 0);
 	} else {
 		trg_event = false;
-		hall_sensor_reading = 0;
+		// hall_sensor_reading = 0;
 	}
 
 	/* Check for an overflow event on this timer */
@@ -430,7 +435,10 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 		overflow_count = timer->ARR;
 		overflow_event = true;
 		// set sensor reading as 0 if timer overflows
-		hall_sensor_reading = 0;
+		// hall_sensor_reading = 0;
+		hallsensor_queue = PIXCAR_GetHallSensorQueue();
+		hall_data.count = 0;
+		PIOS_Queue_Send(hallsensor_queue, &hall_data, 0);
 	} else {
 		overflow_count = 0;
 		overflow_event = false;
@@ -453,7 +461,7 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 	(void)overflow_event;
 	(void)edge_event;
 	(void)overflow_count;
-	(void)hall_sensor_reading;
+	// (void)hall_sensor_reading;
 	(void)edge_count;
 	// if(overflow_event)
 	// {

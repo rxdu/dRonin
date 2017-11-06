@@ -13,8 +13,10 @@
 #include "stdint.h"
 #include "pios_queue.h"
 
-// struct pios_queue *PIXCAR_GetCANCmdQueue();
+struct pios_sensor_hallsensor_data {
+	uint16_t count;
+};
 
-void updateHallSensorData(uint16_t count);
+struct pios_queue *PIXCAR_GetHallSensorQueue(void);
 
 #endif /* PIXCAR_H */
