@@ -78,6 +78,10 @@ UAVCANNode::UAVCANNode() : can_node_(pios_uavcan::PIOSUAVCANDriver::instance(),
         cmd_sub_.start([&](const pixcar::CarCommand &msg) {
             JLinkRTTPrintf(0, "Msg received: %d, %d\n", (int32_t)(msg.servo_cmd * 100), (int32_t)(msg.motor_cmd * 100));
 
+            struct pios_can_cmd_data cmd;
+            cmd.steering = msg.servo_cmd;
+            cmd.throttle = msg.motor_cmd;
+            PIXCAR_SetNavigationDesired(&cmd);
             // updateCmdFromCAN(msg.servo_cmd, msg.motor_cmd);
         });
     if (cmd_sub_start_res < 0)

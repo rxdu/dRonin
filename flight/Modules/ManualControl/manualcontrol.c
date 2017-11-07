@@ -44,10 +44,12 @@
 #include "failsafe_control.h"
 #include "transmitter_control.h"
 
+#include "systemalarms.h"
 #include "drivingstatus.h"
+
 #include "carmanualcontrolcommand.h"
 #include "carmanualcontrolsettings.h"
-#include "systemalarms.h"
+#include "carnavigationdesired.h"
 
 // Private constants
 #if defined(PIOS_MANUAL_STACK_SIZE)
@@ -93,7 +95,8 @@ int32_t ManualControlStart()
  */
 int32_t ManualControlInitialize()
 {
-	if (transmitter_control_initialize() == -1) {
+	if (transmitter_control_initialize() == -1 \
+		|| CarNavigationDesiredInitialize() == -1) {
 	
 		return -1;
 	}

@@ -17,6 +17,14 @@ struct pios_sensor_hallsensor_data {
 	uint16_t count;
 };
 
+struct pios_can_cmd_data {
+	float steering;
+	float throttle;
+};
+
 struct pios_queue *PIXCAR_GetHallSensorQueue(void);
+
+void PIXCAR_ResetNavigationDesired();
+void PIXCAR_SetNavigationDesired(struct pios_can_cmd_data * cmd);
 
 #endif /* PIXCAR_H */

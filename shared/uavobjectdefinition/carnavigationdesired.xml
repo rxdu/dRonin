@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<xml>
+	<object name="CarNavigationDesired" singleinstance="true" settings="false">
+		<description>The desired control command for actuators.</description>
+		<field name="Steering" units="degrees" type="float" elements="1"/>
+		<field name="Throttle" units="%" type="float" elements="1"/>
+		<field name="StabilizationMode" parent="SharedDefs.StabilizationMode" type="enum" elementnames="Roll,Pitch,Yaw"/>
+		<field name="ReprojectionMode" parent="SharedDefs.ReprojectionMode" type="enum" elements="1"/>
+		<access gcs="readwrite" flight="readwrite"/>
+		<telemetrygcs acked="false" updatemode="manual" period="0"/>
+		<telemetryflight acked="false" updatemode="throttled" period="1000"/>
+		<logging updatemode="periodic" period="500"/>
+	</object>
+</xml>

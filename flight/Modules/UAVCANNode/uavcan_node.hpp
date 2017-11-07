@@ -11,6 +11,7 @@
 
 extern "C" {
     #include "uavcan_interface.h"
+    #include "pixcar.h"
 }
 
 #include "pios_uavcan.hpp"

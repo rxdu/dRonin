@@ -51,8 +51,10 @@
 #include "systemsettings.h"
 #include "shareddefs.h"
 #include "caractuatordesired.h"
+#include "carnavigationdesired.h"
 
 #include "misc_math.h"
+#include "pixcar.h"
 
 #include "jlink_rtt.h"
 
@@ -104,7 +106,7 @@ static enum control_status        control_status;
 static bool                       settings_updated;
 
 // Private functions
-static void update_actuator_desired(CarManualControlCommandData * cmd);
+static void update_manual_desired(CarManualControlCommandData * cmd);
 static void update_navigation_desired(CarManualControlCommandData * cmd);
 static void update_failsafe_desired(CarManualControlCommandData * cmd);
 // static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
@@ -462,14 +464,14 @@ int32_t transmitter_control_select(bool reset_controller)
 
 	switch(drivingMode) {
 	case DRIVINGSTATUS_DRIVINGMODE_MANUAL:
-		// resetCmdFromCAN();
-		update_actuator_desired(&cmd);
+		PIXCAR_ResetNavigationDesired();
+		update_manual_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
 		update_navigation_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
-		// resetCmdFromCAN();
+		PIXCAR_ResetNavigationDesired();
 		update_failsafe_desired(&cmd);
 		break;
 	default:
@@ -908,14 +910,13 @@ static inline float scale_navigation(NavigationSettingsData *navSettings,
 }
 
 //! In manual mode directly set actuator desired
-static void update_actuator_desired(CarManualControlCommandData * cmd)
+static void update_manual_desired(CarManualControlCommandData * cmd)
 {
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);
 	actuator.Roll = cmd->Roll;
 	actuator.Pitch = cmd->Pitch;
 	actuator.Yaw = cmd->Yaw;
-	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
 	actuator.Steering = cmd->Roll;
 	actuator.Throttle = cmd->Pitch;
 
@@ -927,33 +928,28 @@ static void update_actuator_desired(CarManualControlCommandData * cmd)
 //! In navigation mode, set navigation desired
 static void update_navigation_desired(CarManualControlCommandData * cmd)
 {
-	float servo_cmd, motor_cmd;
-	servo_cmd = 0;
-	motor_cmd = 0;
-	// getCmdFromCAN(&servo_cmd, &motor_cmd);
+	CarNavigationDesiredData nav_desired;
+	CarNavigationDesiredGet(&nav_desired);
 
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);
 	actuator.Roll = cmd->Roll;
 	actuator.Pitch = cmd->Pitch;
 	actuator.Yaw = cmd->Yaw;
-	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
-	actuator.Steering = servo_cmd;
-	actuator.Throttle = motor_cmd;
-	JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
+	actuator.Steering = nav_desired.Steering;
+	actuator.Throttle = nav_desired.Throttle;
+	// JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
 
 	CarActuatorDesiredSet(&actuator);
 }
 
 static void update_failsafe_desired(CarManualControlCommandData * cmd)
 {
-	// TODO : FOR TEST ONLY
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);
 	actuator.Roll = cmd->Roll;
 	actuator.Pitch = cmd->Pitch;
 	actuator.Yaw = cmd->Yaw;
-	// actuator.Throttle = (cmd->Throttle < 0) ? -1 : cmd->Throttle;
 	actuator.Steering = 0;
 	actuator.Throttle = 0;
 
