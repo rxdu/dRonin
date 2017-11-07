@@ -15,14 +15,13 @@
 
 /******************************* Source text **********************************
 uint32 time_stamp
-# 4-byte float
-float32 speed
+uint16 speed
 ******************************************************************************/
 
 /********************* DSDL signature source definition ***********************
 pixcar.CarRawSpeed
 saturated uint32 time_stamp
-saturated float32 speed
+saturated uint16 speed
 ******************************************************************************/
 
 #undef time_stamp
@@ -44,7 +43,7 @@ struct UAVCAN_EXPORT CarRawSpeed_
     struct FieldTypes
     {
         typedef ::uavcan::IntegerSpec< 32, ::uavcan::SignednessUnsigned, ::uavcan::CastModeSaturate > time_stamp;
-        typedef ::uavcan::FloatSpec< 32, ::uavcan::CastModeSaturate > speed;
+        typedef ::uavcan::IntegerSpec< 16, ::uavcan::SignednessUnsigned, ::uavcan::CastModeSaturate > speed;
     };
 
     enum
@@ -79,7 +78,7 @@ struct UAVCAN_EXPORT CarRawSpeed_
          * This check shall never be performed in user code because MaxBitLen value
          * actually depends on the nested types, thus it is not invariant.
          */
-        ::uavcan::StaticAssert<64 == MaxBitLen>::check();
+        ::uavcan::StaticAssert<48 == MaxBitLen>::check();
 #endif
     }
 
@@ -178,7 +177,7 @@ int CarRawSpeed_<_tmpl>::decode(ReferenceType self, ::uavcan::ScalarCodec& codec
 template <int _tmpl>
 ::uavcan::DataTypeSignature CarRawSpeed_<_tmpl>::getDataTypeSignature()
 {
-    ::uavcan::DataTypeSignature signature(0x2B8C0B8A6F7D0B40ULL);
+    ::uavcan::DataTypeSignature signature(0xA420D9DABD697433ULL);
 
     FieldTypes::time_stamp::extendDataTypeSignature(signature);
     FieldTypes::speed::extendDataTypeSignature(signature);

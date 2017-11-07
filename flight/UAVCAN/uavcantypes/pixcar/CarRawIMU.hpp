@@ -14,7 +14,6 @@
 #include <uavcan/marshal/types.hpp>
 
 /******************************* Source text **********************************
-# 4-byte float
 uint32 time_stamp
 float32[3] gyro
 float32[3] accel
