@@ -104,7 +104,6 @@ include $(APPLIBDIR)/ChibiOS/library.mk
 
 ## OPENPILOT CORE:
 SRC += chibi_main.c
-# CPPSRC += chibi_main.cpp
 SRC += ${OPMODULEDIR}/System/systemmod.c
 SRC += ${OPMODULEDIR}/System/rgbleds.c
 SRC += pios_board.c
