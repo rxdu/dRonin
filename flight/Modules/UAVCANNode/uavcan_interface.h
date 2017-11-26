@@ -44,8 +44,8 @@ struct CANSpeedRawData
 };
 
 #define IMU_MSG_PRIORITY    5
-#define MAG_MSG_PRIORITY    3
-#define SPD_MSG_PRIORITY    5
+#define MAG_MSG_PRIORITY    4
+#define SPD_MSG_PRIORITY    6
 
 void getCmdFromCAN(float* servo_cmd, float* motor_cmd);
 void resetCmdFromCAN(void);
