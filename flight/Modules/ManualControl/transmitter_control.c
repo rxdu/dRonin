@@ -105,23 +105,23 @@ static float                      driving_mode_value;
 static enum control_status        control_status;
 static bool                       settings_updated;
 
+static struct pios_can_cmd_data cmd_from_can;
+
 // Private functions
 static void update_manual_desired(CarManualControlCommandData * cmd);
 static void update_navigation_desired(CarManualControlCommandData * cmd);
-static void update_failsafe_desired(CarManualControlCommandData * cmd);
-// static void altitude_hold_desired(CarManualControlCommandData * cmd, bool drivingModeChanged, SystemSettingsAirframeTypeOptions * airframe_type);
+static void update_emergency_desired(CarManualControlCommandData * cmd);
+
 static void set_driving_mode();
 static void process_transmitter_events(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings, bool valid);
-static void set_manual_control_error(SystemAlarmsManualControlOptions errorCode);
+
 static float scaleChannel(int n, int16_t value);
 static bool validInputRange(int n, uint16_t value, uint16_t offset);
 static uint32_t timeDifferenceMs(uint32_t start_time, uint32_t end_time);
 static void applyDeadband(float *value, float deadband);
+
 static void resetRcvrActivity(struct rcvr_activity_fsm * fsm);
 static bool updateRcvrActivity(struct rcvr_activity_fsm * fsm);
-
-// Exposed from manualcontrol to prevent attempts to arm when unsafe
-extern bool ok_to_arm();
 
 //! Convert a rssi type to the associated channel group.
 int rssitype_to_channelgroup() {
@@ -336,7 +336,7 @@ int32_t transmitter_control_update()
 			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] == (uint16_t) PIOS_RCVR_INVALID ||
 			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] == (uint16_t) PIOS_RCVR_NODRIVER ))) {
 
-		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_SETTINGS);
+		// set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_SETTINGS);
 
 		cmd.Connected = CARMANUALCONTROLCOMMAND_CONNECTED_FALSE;
 		CarManualControlCommandSet(&cmd);
@@ -396,13 +396,15 @@ int32_t transmitter_control_update()
 			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ARMING] < (uint16_t)PIOS_RCVR_NODRIVER &&
 			cmd.Channel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_DRIVINGMODE] < (uint16_t)PIOS_RCVR_NODRIVER;
 
-		if (rx_signal_detected)
-			set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_CHANNELCONFIGURATION);
-		else
-			set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_NORX);
+		(void)rx_signal_detected;
+
+		// if (rx_signal_detected)
+		// 	set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_CHANNELCONFIGURATION);
+		// else
+		// 	set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_NORX);
 
 	} else if (valid_input_detected) {
-		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_NONE);
+		// set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_NONE);
 
 		// Scale channels to -1 -> +1 range
 		cmd.Roll           = scaledChannel[CARMANUALCONTROLSETTINGS_CHANNELGROUPS_ROLL];
@@ -470,12 +472,12 @@ int32_t transmitter_control_select(bool reset_controller)
 	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
 		update_navigation_desired(&cmd);
 		break;
-	case DRIVINGSTATUS_DRIVINGMODE_FAILSAFE:
+	case DRIVINGSTATUS_DRIVINGMODE_EMERGENCY:
 		PIXCAR_ResetNavigationDesired();
-		update_failsafe_desired(&cmd);
+		update_emergency_desired(&cmd);
 		break;
 	default:
-		set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_UNDEFINED);
+		// set_manual_control_error(SYSTEMALARMS_MANUALCONTROL_UNDEFINED);
 		return -1;
 	}
 	lastDrivingMode = drivingMode;
@@ -507,8 +509,8 @@ uint8_t transmitter_control_get_driving_mode()
 static bool arming_position(CarManualControlCommandData * cmd, CarManualControlSettingsData * settings) {
 
 	// If system is not appropriate to arm, do not even attempt
-	if (!ok_to_arm())
-		return false;
+	// if (!ok_to_arm())
+	// 	return false;
 
 	bool lowThrottle = cmd->Throttle <= 0;
 
@@ -674,22 +676,11 @@ static void process_transmitter_events(CarManualControlCommandData * cmd, CarMan
 		return;
 	}
 
-	// bool low_throt = cmd->Throttle <= 0;
-
-	// if (low_throt) {
-	// 	/* Determine whether to disarm when throttle is low */
-	// 	uint8_t drv_mode;
-	// 	DrivingStatusDrivingModeGet(&drv_mode);
-
-	// 	if (drv_mode == DRIVINGSTATUS_DRIVINGMODE_NAVIGATION1) {
-	// 		low_throt = false;
-	// 	}
-	// }
-
-	// Do not disarm due to low throttle
+	// Never disarm due to low throttle
 	bool low_throt = false;
-
 	if (low_throt) {
+		// Currently this condition will never be met
+		// It could be recovered in the future
 		if (check_receiver_timer(settings->ArmedTimeout)) {
 			control_status = STATUS_DISARM;
 			return;
@@ -891,24 +882,6 @@ static bool updateRcvrActivity(struct rcvr_activity_fsm * fsm)
 	return (activity_updated);
 }
 
-static inline float scale_navigation(NavigationSettingsData *navSettings,
-		float cmd, SharedDefsNavigationModeOptions mode,
-		NavigationDesiredNavigationModeElem axis) {
-	switch (mode) {
-		case SHAREDDEFS_NAVIGATIONMODE_DISABLED:
-		case SHAREDDEFS_NAVIGATIONMODE_FAILSAFE:
-			return 0;
-		case SHAREDDEFS_NAVIGATIONMODE_MANUAL:
-			return cmd;
-		case SHAREDDEFS_NAVIGATIONMODE_LINEFOLLOWING:
-			// For auto, pass the command through raw.
-			return cmd;
-	}
-
-	PIOS_Assert(false);
-	return 0;
-}
-
 //! In manual mode directly set actuator desired
 static void update_manual_desired(CarManualControlCommandData * cmd)
 {
@@ -928,22 +901,23 @@ static void update_manual_desired(CarManualControlCommandData * cmd)
 //! In navigation mode, set navigation desired
 static void update_navigation_desired(CarManualControlCommandData * cmd)
 {
-	CarNavigationDesiredData nav_desired;
-	CarNavigationDesiredGet(&nav_desired);
+	PIXCAR_GetNavigationDesired(&cmd_from_can);
 
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);
 	actuator.Roll = cmd->Roll;
 	actuator.Pitch = cmd->Pitch;
 	actuator.Yaw = cmd->Yaw;
-	actuator.Steering = nav_desired.Steering;
-	actuator.Throttle = nav_desired.Throttle;
-	// JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
+	actuator.Steering = cmd_from_can.steering;
+	actuator.Throttle = cmd_from_can.throttle;
+
+	if(actuator.Steering != 0 && actuator.Throttle != 0)
+		JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
 
 	CarActuatorDesiredSet(&actuator);
 }
 
-static void update_failsafe_desired(CarManualControlCommandData * cmd)
+static void update_emergency_desired(CarManualControlCommandData * cmd)
 {
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);
@@ -1060,46 +1034,6 @@ static void applyDeadband(float *value, float deadband)
 
 		*value /= (1 - deadband);
 	}
-}
-
-/**
- * Set the error code and alarm state
- * @param[in] error code
- */
-static void set_manual_control_error(SystemAlarmsManualControlOptions error_code)
-{
-	// Get the severity of the alarm given the error code
-	SystemAlarmsAlarmOptions severity;
-	switch (error_code) {
-	case SYSTEMALARMS_MANUALCONTROL_NONE:
-		severity = SYSTEMALARMS_ALARM_OK;
-		break;
-	case SYSTEMALARMS_MANUALCONTROL_NORX:
-	case SYSTEMALARMS_MANUALCONTROL_CHANNELCONFIGURATION:
-	case SYSTEMALARMS_MANUALCONTROL_ACCESSORY:
-		severity = SYSTEMALARMS_ALARM_WARNING;
-		break;
-	case SYSTEMALARMS_MANUALCONTROL_SETTINGS:
-		severity = SYSTEMALARMS_ALARM_CRITICAL;
-		break;
-	case SYSTEMALARMS_MANUALCONTROL_ALTITUDEHOLD:
-		severity = SYSTEMALARMS_ALARM_ERROR;
-		break;
-	case SYSTEMALARMS_MANUALCONTROL_UNDEFINED:
-	default:
-		severity = SYSTEMALARMS_ALARM_CRITICAL;
-		error_code = SYSTEMALARMS_MANUALCONTROL_UNDEFINED;
-	}
-
-	// Make sure not to set the error code if it didn't change
-	SystemAlarmsManualControlOptions current_error_code;
-	SystemAlarmsManualControlGet((uint8_t *) &current_error_code);
-	if (current_error_code != error_code) {
-		SystemAlarmsManualControlSet((uint8_t *) &error_code);
-	}
-
-	// AlarmSet checks only updates on toggle
-	AlarmsSet(SYSTEMALARMS_ALARM_MANUALCONTROL, (uint8_t) severity);
 }
 
 /**

@@ -143,7 +143,7 @@
 		<field name="DrivingModeNumber" units="" type="uint8" elements="1" defaultvalue="3">
 			<description>Number of driving modes</description>
 		</field>
-		<field name="DrivingModePosition" units="" type="enum" elements="3" parent="SharedDefs.DrivingMode" defaultvalue="Manual,Navigation,Failsafe">
+		<field name="DrivingModePosition" units="" type="enum" elements="3" parent="SharedDefs.DrivingMode" defaultvalue="Manual,Navigation,Emergency">
 			<description>Driving mode per position</description>
 		</field>
 		<field name="ArmedTimeout" units="ms" type="uint16" elements="1" defaultvalue="30000">

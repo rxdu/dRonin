@@ -82,7 +82,6 @@ UAVCANNode::UAVCANNode() : can_node_(pios_uavcan::PIOSUAVCANDriver::instance(),
             cmd.steering = msg.servo_cmd;
             cmd.throttle = msg.motor_cmd;
             PIXCAR_SetNavigationDesired(&cmd);
-            // updateCmdFromCAN(msg.servo_cmd, msg.motor_cmd);
         });
     if (cmd_sub_start_res < 0)
         SEGGER_RTT_WriteString(0, "Failed to init CMD subscriber\n");

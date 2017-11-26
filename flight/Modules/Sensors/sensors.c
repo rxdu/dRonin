@@ -62,6 +62,8 @@ extern pios_i2c_t external_i2c_adapter_id;
 #include "coordinate_conversions.h"
 #include "hallsensor.h"
 
+#include "jlink_rtt.h"
+
 // Private constants
 #define STACK_SIZE_BYTES 1000
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
@@ -252,6 +254,8 @@ static void SensorsTask(void *parameters)
 			AlarmsSet(SYSTEMALARMS_ALARM_SENSORS, SYSTEMALARMS_ALARM_CRITICAL);
 			PIOS_Thread_Sleep_Until(&lastSysTime, SENSOR_PERIOD);
 		}
+
+		// JLinkRTTPrintf(0, "Sensor task updated \n", 0);
 
 		struct pios_sensor_gyro_data gyros;
 		struct pios_sensor_accel_data accels;

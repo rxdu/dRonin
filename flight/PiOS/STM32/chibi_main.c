@@ -30,7 +30,7 @@
 
 #include "pios_config.h"
 #include "uavobjectsinit.h"
-#include "systemmod.h"
+// #include "systemmod.h"
 #include "pios_thread.h"
 
 /* Local Variables */
