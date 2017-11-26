@@ -12,6 +12,9 @@
 #define HALL_SENSOR_QUEUE_SIZE 1
 #define CAN_CMD_QUEUE_SIZE 2 
 
+static uint32_t idleCounter;
+static uint32_t idleCounterClear;
+
 static struct pios_queue *hallsensor_queue;
 
 struct pios_queue *PIXCAR_GetHallSensorQueue(void)
@@ -42,4 +45,18 @@ void PIXCAR_SetNavigationDesired(struct pios_can_cmd_data * cmd)
 	nav_desired.Throttle = cmd->throttle;
 
 	CarNavigationDesiredSet(&nav_desired);
+}
+
+/**
+ * Called by the RTOS when the CPU is idle, used to measure the CPU idle time.
+ */
+void vApplicationIdleHook(void)
+{
+	// Called when the scheduler has no tasks to run
+	if (idleCounterClear == 0) {
+		++idleCounter;
+	} else {
+		idleCounter = 0;
+		idleCounterClear = 0;
+	}
 }

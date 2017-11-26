@@ -73,15 +73,14 @@ void PIOS_Board_Init(void)
 	/* Delay system */
 	PIOS_DELAY_Init();
 
+	/* LED */
 	const struct pios_board_info *bdinfo = &pios_board_info_blob;
 
-#if defined(PIOS_INCLUDE_ANNUNC)
 	const struct pios_annunc_cfg *led_cfg = PIOS_BOARD_HW_DEFS_GetLedCfg(bdinfo->board_rev);
 	PIOS_Assert(led_cfg);
 	PIOS_ANNUNC_Init(led_cfg);
-#endif /* PIOS_INCLUDE_ANNUNC */
 
-#if defined(PIOS_INCLUDE_SPI)
+	/* Initialize Sensor SPI interface */
 	if (PIOS_SPI_Init(&pios_spi_baro_id, &pios_spi_baro_cfg))
 	{
 		PIOS_DEBUG_Assert(0);
@@ -90,7 +89,6 @@ void PIOS_Board_Init(void)
 	{
 		PIOS_Assert(0);
 	}
-#endif
 
 	/* Initialize the task monitor library */
 	TaskMonitorInitialize();
@@ -99,14 +97,11 @@ void PIOS_Board_Init(void)
 	UAVObjInitialize();
 
 	/* Initialize the alarms library. Reads RCC reset flags */
-	AlarmsInitialize();
+	// AlarmsInitialize();
 	PIOS_RESET_Clear(); // Clear the RCC reset flags after use.
 
-#if defined(PIOS_INCLUDE_RTC)
 	/* Initialize the real-time clock and its associated tick */
 	PIOS_RTC_Init(&pios_rtc_main_cfg);
-	JLinkWriteString(0, "RTC init successful\n");
-#endif
 
 	/* Initialize watchdog as early as possible to catch faults during init
 	 * but do it only if there is no debugger connected
