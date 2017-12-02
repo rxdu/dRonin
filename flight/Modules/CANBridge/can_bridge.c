@@ -27,15 +27,12 @@
 #define STACK_SIZE_BYTES 2048
 #endif
 
-#define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH 
+#define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
 
-#define GYRO_TIMEOUT_MS 2
+#define GYRO_TIMEOUT_MS 1
 
 #define UPDATE_PERIOD_MS 5
 #define UPDATE_PERIOD_US 2000
-
-#define CAN_RX_TIMEOUT_MS 10
-#define CAN_CMD_QUEUE_LEN 2
 
 // Parameters for speed estimation
 #define WHEEL_DIAMETER 0.065
@@ -43,10 +40,6 @@
 
 // Private variables
 static struct pios_thread *taskHandle;
-
-// cmd queue (from CAN bus)
-// static struct pios_queue *canCmdQueue;
-static struct CANCmdData cmd_from_can;
 
 // sensor queues
 static struct pios_queue *gyroQueue;
@@ -58,39 +51,14 @@ static struct pios_queue *speedQueue;
 static void canBridgeTask(void *parameters);
 // static float calcCarSpeed(void);
 
-void updateCmdFromCAN(float servo_cmd, float motor_cmd)
-{
-	// struct CANCmdData cmd_data;
-	// cmd_data.servo = servo_cmd;
-	// cmd_data.motor = motor_cmd;
-	// if(PIOS_Queue_Send(canCmdQueue, &cmd_data, 0))
-	// {
-	// 	JLinkRTTPrintf(0, "CMD queue sent: %d, %d\n",(int32_t)(cmd_data.servo*100), (int32_t)(cmd_data.motor*100));
-	// }
-	cmd_from_can.servo = servo_cmd;
-	cmd_from_can.motor = motor_cmd;
-}
-
-void getCmdFromCAN(float* servo_cmd, float* motor_cmd)
-{
-	*servo_cmd = cmd_from_can.servo;
-	*motor_cmd = cmd_from_can.motor;
-}
-
-void resetCmdFromCAN(void)
-{
-	cmd_from_can.servo = 0;
-	cmd_from_can.motor = 0;
-}
-
 /**
  * Module starting
  */
 int32_t CANBridgeStart()
 {
 	// Create the queues for the sensors
-	gyroQueue = PIOS_Queue_Create(5, sizeof(UAVObjEvent));
-	accelQueue = PIOS_Queue_Create(5, sizeof(UAVObjEvent));
+	gyroQueue = PIOS_Queue_Create(1, sizeof(UAVObjEvent));
+	accelQueue = PIOS_Queue_Create(1, sizeof(UAVObjEvent));
 	magQueue = PIOS_Queue_Create(1, sizeof(UAVObjEvent));
 	speedQueue = PIOS_Queue_Create(1, sizeof(UAVObjEvent));
 
@@ -106,10 +74,6 @@ int32_t CANBridgeStart()
 	/* Delay system */
 	PIOS_DELAY_Init();
 
-	// Make sure CAN commands initialized with safe value
-	cmd_from_can.servo = 0;
-	cmd_from_can.motor = 0;
-
 	// Start main task
 	taskHandle = PIOS_Thread_Create(canBridgeTask, "CANBridge", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);
 	//TaskMonitorAdd(TASKINFO_RUNNING_MANUALCONTROL, taskHandle);
@@ -122,10 +86,6 @@ int32_t CANBridgeStart()
  */
 int32_t CANBridgeInitialize()
 {
-	// canCmdQueue = PIOS_Queue_Create(CAN_CMD_QUEUE_LEN, sizeof(struct CANCmdData));
-	// if (canCmdQueue == NULL)
-	// 	return -1;
-
 	return 0;
 }
 
@@ -158,12 +118,12 @@ static void canBridgeTask(void *parameters)
 
     while (1)
 	{
-		// static uint32_t time_label = 0;
-		// uint32_t prev_time_label = time_label;
-		// time_label = PIOS_DELAY_GetuS();
-		// uint32_t error = time_label - prev_time_label;
-		// //if(error > 5200)
-		// JLinkRTTPrintf(0, "can bridge update period: %ld\n",error);
+		static uint32_t time_label = 0;
+		uint32_t prev_time_label = time_label;
+		time_label = PIOS_DELAY_GetuS();
+		uint32_t error = time_label - prev_time_label;
+		//if(error > 5200)
+		JLinkRTTPrintf(0, "can bridge update period: %ld\n",error);
 
 		uint32_t start_time = PIOS_DELAY_GetuS();
 
@@ -171,7 +131,7 @@ static void canBridgeTask(void *parameters)
 		uint32_t time_stamp = PIOS_Thread_Systime();		
 
 		bool gyroTimeout  = PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) != true;
-		bool accelTimeout = PIOS_Queue_Receive(accelQueue, &ev, 1) != true;
+		bool accelTimeout = PIOS_Queue_Receive(accelQueue, &ev, 0) != true;
 
 		// When one of these is updated so should the other.
 		if (gyroTimeout || accelTimeout) {
