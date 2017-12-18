@@ -4,7 +4,7 @@
  * Created on: Nov 04, 2017 17:12
  * 
  * Copyright (c) 2017 Ruixiang Du (rdu)
- */ 
+ */
 
 #include "openpilot.h"
 #include "pios_queue.h"
@@ -21,22 +21,22 @@
 #include "jlink_rtt.h"
 
 // Private constants
-#if defined(PIOS_MANUAL_STACK_SIZE)
-#define STACK_SIZE_BYTES PIOS_MANUAL_STACK_SIZE
-#else
-#define STACK_SIZE_BYTES 2048
-#endif
+// #if defined(PIOS_MANUAL_STACK_SIZE)
+// #define STACK_SIZE_BYTES PIOS_MANUAL_STACK_SIZE
+// #else
+// #define STACK_SIZE_BYTES 2048
+// #endif
+
+#define STACK_SIZE_BYTES 1024*8
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
 
 #define GYRO_TIMEOUT_MS 1
 
+#define UAVCAN_SPIN_TIMEOUT_MS 1
+
 #define UPDATE_PERIOD_MS 5
 #define UPDATE_PERIOD_US 2000
-
-// Parameters for speed estimation
-#define WHEEL_DIAMETER 0.065
-#define GEAR_RATIO	6.58	// with 20T pinion gear
 
 // Private variables
 static struct pios_thread *taskHandle;
@@ -49,7 +49,9 @@ static struct pios_queue *speedQueue;
 
 // Private functions
 static void canBridgeTask(void *parameters);
-// static float calcCarSpeed(void);
+
+bool UAVCANNode_InitComm();
+void UAVCANNode_SpinNode(int32_t timeout);
 
 /**
  * Module starting
@@ -73,6 +75,7 @@ int32_t CANBridgeStart()
 
 	/* Delay system */
 	PIOS_DELAY_Init();
+	UAVCANNode_InitComm();
 
 	// Start main task
 	taskHandle = PIOS_Thread_Create(canBridgeTask, "CANBridge", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);
@@ -116,37 +119,35 @@ static void canBridgeTask(void *parameters)
 
 	hallData.count = 0;
 
-    while (1)
+	uint32_t sys_time = PIOS_Thread_Systime();
+	while (1)
 	{
-		static uint32_t time_label = 0;
-		uint32_t prev_time_label = time_label;
-		time_label = PIOS_DELAY_GetuS();
-		uint32_t error = time_label - prev_time_label;
-		//if(error > 5200)
-		JLinkRTTPrintf(0, "can bridge update period: %ld\n",error);
+		// static uint32_t time_label = 0;
+		// uint32_t prev_time_label = time_label;
+		// time_label = PIOS_DELAY_GetuS();
+		// if(time_label > prev_time_label)
+		// 	JLinkRTTPrintf(0, "%ld\n", time_label - prev_time_label);
+		// else
+		// 	JLinkRTTPrintf(0, "%ld\n", 0xffffffff - prev_time_label + time_label);
 
-		uint32_t start_time = PIOS_DELAY_GetuS();
+		uint32_t time_stamp = PIOS_Thread_Systime();
 
-		bool gyro_accel_updated = true;
-		uint32_t time_stamp = PIOS_Thread_Systime();		
+		// bool gyroTimeout = PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) != true;
+		// bool accelTimeout = PIOS_Queue_Receive(accelQueue, &ev, 0) != true;
 
-		bool gyroTimeout  = PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) != true;
-		bool accelTimeout = PIOS_Queue_Receive(accelQueue, &ev, 0) != true;
+		// if (gyroTimeout)
+		// 	JLinkRTTPrintf(0, "Gyro timeout\n", 0);
+		// if (accelTimeout)
+		// 	JLinkRTTPrintf(0, "Accel timeout\n", 0);
 
-		// When one of these is updated so should the other.
-		if (gyroTimeout || accelTimeout) {
-			// failed to get new sensor data, do not send to CAN bus
-			gyro_accel_updated = false;
-		}
-		
-		// Send IMU sensor data to CAN bus if updated		
-		if(gyro_accel_updated)
+		// Send IMU sensor data to CAN bus if updated
+		if (PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) && PIOS_Queue_Receive(accelQueue, &ev, 0))
 		{
 			struct CANIMURawData imu_raw;
 
 			GyrosGet(&gyrosData);
-			AccelsGet(&accelsData);			
-			
+			AccelsGet(&accelsData);
+
 			imu_raw.time_stamp = time_stamp;
 
 			imu_raw.gyro.x = gyrosData.x;
@@ -158,58 +159,49 @@ static void canBridgeTask(void *parameters)
 			imu_raw.accel.z = accelsData.z;
 
 			UAVCANNode_PublishIMUData(&imu_raw);
+		}
+		else
+			JLinkRTTPrintf(0, "No IMU data: %ld\n", 0);
 
-			if(PIOS_Queue_Receive(magQueue, &ev, 0))
-			{
-				struct CANMagRawData mag_raw;
-	
-				MagnetometerGet(&magData);
-	
-				mag_raw.time_stamp = time_stamp;
-	
-				mag_raw.mag.x = magData.x;
-				mag_raw.mag.y = magData.y;
-				mag_raw.mag.z = magData.z;
-	
-				// (void)mag_raw;
-				UAVCANNode_PublishMagData(&mag_raw);
-			}
-			// else
-			// 	JLinkRTTPrintf(0, "No Mag data: %ld\n",0);
+		if (PIOS_Queue_Receive(magQueue, &ev, 0))
+		{
+			struct CANMagRawData mag_raw;
 
-			if(PIOS_Queue_Receive(speedQueue, &ev, 0))
-			{			 		
-				struct CANSpeedRawData spd_raw;
+			MagnetometerGet(&magData);
 
-				HallSensorGet(&hallData);
+			mag_raw.time_stamp = time_stamp;
 
-				// Send latest speed measurement
-				// float speed = calcCarSpeed();				
-				spd_raw.time_stamp = time_stamp;
-				spd_raw.speed = hallData.count;
-				(void)spd_raw;
-				UAVCANNode_PublishSpeedData(&spd_raw);
+			mag_raw.mag.x = magData.x;
+			mag_raw.mag.y = magData.y;
+			mag_raw.mag.z = magData.z;
 
-				JLinkRTTPrintf(0, "Speed: %ld\n",spd_raw.speed);
-			}
+			// (void)mag_raw;
+			UAVCANNode_PublishMagData(&mag_raw);
+		}
+		// else
+		// 	JLinkRTTPrintf(0, "No Mag data: %ld\n",0);
+
+		if (PIOS_Queue_Receive(speedQueue, &ev, 0))
+		{
+			struct CANSpeedRawData spd_raw;
+
+			HallSensorGet(&hallData);
+
+			// Send latest speed measurement
+			// float speed = calcCarSpeed();
+			spd_raw.time_stamp = time_stamp;
+			spd_raw.hallsensor_count = hallData.count;
+			spd_raw.speed_estimate = hallData.speed_estimate;
+			UAVCANNode_PublishSpeedData(&spd_raw);
+
+			// JLinkRTTPrintf(0, "Speed: %ld\n", spd_raw.speed);
 		}
 		// else
 		// 	JLinkRTTPrintf(0, "No speed data: %ld\n",0);
-		
+
 		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 		// PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
-		
-		uint32_t spent_time = PIOS_DELAY_GetuSSince(start_time);
-		// (void)spent_time;
-		if(spent_time < UPDATE_PERIOD_US)
-			PIOS_DELAY_WaituS(UPDATE_PERIOD_US - spent_time);
-    }
+		UAVCANNode_SpinNode(UAVCAN_SPIN_TIMEOUT_MS);
+		PIOS_Thread_Sleep_Until(&sys_time, UPDATE_PERIOD_MS);
+	}
 }
-
-// static float calcCarSpeed()
-// {
-// 	uint16_t hall_reading = PIOS_TIM_GetHallSensorReading();
-// 	// JLinkRTTPrintf(0, "hall reading: %ld\n",hall_reading);
-// 	float speed = 1.0e6/(hall_reading * 6.0)/GEAR_RATIO*(M_PI*WHEEL_DIAMETER);
-// 	return speed;
-// }

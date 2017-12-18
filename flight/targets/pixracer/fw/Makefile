@@ -41,7 +41,6 @@ MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl
-#MODULES += UAVCANNode
 MODULES += CANBridge
 MODULES += PixCar
 #MODULES += Stabilization

@@ -11,7 +11,11 @@
 
 #include <stdint.h>
 
-struct CANSensorData
+#define IMU_MSG_PRIORITY    2
+#define MAG_MSG_PRIORITY    3
+#define SPD_MSG_PRIORITY    4
+
+struct CANSensorData3Axis
 {
     float x;
     float y;
@@ -27,25 +31,22 @@ struct CANCmdData
 struct CANIMURawData
 {
     uint32_t time_stamp;
-    struct CANSensorData gyro;
-    struct CANSensorData accel;
+    struct CANSensorData3Axis gyro;
+    struct CANSensorData3Axis accel;
 };
 
 struct CANMagRawData
 {
     uint32_t time_stamp;
-    struct CANSensorData mag;
+    struct CANSensorData3Axis mag;
 }; 
 
 struct CANSpeedRawData
 {
     uint32_t time_stamp;
-    uint32_t speed;
+    uint32_t hallsensor_count;
+    float speed_estimate;
 };
-
-#define IMU_MSG_PRIORITY    5
-#define MAG_MSG_PRIORITY    3
-#define SPD_MSG_PRIORITY    5
 
 void getCmdFromCAN(float* servo_cmd, float* motor_cmd);
 void resetCmdFromCAN(void);

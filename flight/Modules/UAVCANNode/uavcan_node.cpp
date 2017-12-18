@@ -71,7 +71,7 @@ UAVCANNode::UAVCANNode() : can_node_(pios_uavcan::PIOSUAVCANDriver::instance(),
         SEGGER_RTT_WriteString(0, "Failed to init Speed publisher\n");
     else
         SEGGER_RTT_WriteString(0, "Publisher Speed init successfully\n");
-    spd_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(2));
+    spd_pub_.setTxTimeout(uavcan::MonotonicDuration::fromMSec(10));
     spd_pub_.setPriority(uavcan::TransferPriority(SPD_MSG_PRIORITY));
 
     const int cmd_sub_start_res =
@@ -98,6 +98,8 @@ void UAVCANNode::spinNode(int32_t spin_timeout)
     {
         SEGGER_RTT_WriteString(0, "UAVCAN node transient failure \n");
     }
+    // else
+    //      SEGGER_RTT_WriteString(0, "UAVCAN node spin \n");
     // JLinkRTTPrintf(0, "UAVCAN memory usage (used-free-peak): %ld, %ld, %ld\n", can_node_.getAllocator().getNumUsedBlocks(), 
     //                 can_node_.getAllocator().getNumFreeBlocks(),
     //                 can_node_.getAllocator().getPeakNumUsedBlocks());
@@ -147,7 +149,8 @@ void UAVCANNode::publishSpeedData(struct CANSpeedRawData *spd_data)
     pixcar::CarRawSpeed spd_msg;
 
     spd_msg.time_stamp = spd_data->time_stamp;
-    spd_msg.speed = spd_data->speed;
+    spd_msg.hallsensor_count = spd_data->hallsensor_count;
+    spd_msg.speed_estimate = spd_data->speed_estimate;
 
     const int spd_pub_res = spd_pub_.broadcast(spd_msg);
     (void)spd_pub_res;

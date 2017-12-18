@@ -2,7 +2,8 @@
 <xml>
 	<object name="HallSensor" singleinstance="true" settings="false">
 		<description>The hall sensor data, used to measure motor speed.</description>
-		<field name="count" units="m/s^2" type="uint16" elements="1"/>
+		<field name="count" units="unit" type="uint16" elements="1"/>
+		<field name="speed_estimate" units="m/s" type="float" elements="1"/>
 		<access gcs="readwrite" flight="readwrite"/>
 		<telemetrygcs acked="false" updatemode="manual" period="0"/>
 		<telemetryflight acked="false" updatemode="throttled" period="1000"/>

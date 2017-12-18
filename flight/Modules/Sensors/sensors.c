@@ -248,14 +248,20 @@ static void SensorsTask(void *parameters)
 	uint32_t last_baro_update_time = PIOS_DELAY_GetRaw();
 
 	while (1) {
+		// static uint32_t time_label = 0;
+		// uint32_t prev_time_label = time_label;
+		// time_label = PIOS_DELAY_GetuS();
+		// if(time_label > prev_time_label)
+		// 	JLinkRTTPrintf(0, "%ld\n", time_label - prev_time_label);
+		// else
+		// 	JLinkRTTPrintf(0, "%ld\n", 0xffffffff - prev_time_label + time_label);
+
 		if (good_runs == 0) {
 			PIOS_WDG_UpdateFlag(PIOS_WDG_SENSORS);
 			lastSysTime = PIOS_Thread_Systime();
 			AlarmsSet(SYSTEMALARMS_ALARM_SENSORS, SYSTEMALARMS_ALARM_CRITICAL);
 			PIOS_Thread_Sleep_Until(&lastSysTime, SENSOR_PERIOD);
 		}
-
-		// JLinkRTTPrintf(0, "Sensor task updated \n", 0);
 
 		struct pios_sensor_gyro_data gyros;
 		struct pios_sensor_accel_data accels;
@@ -530,6 +536,7 @@ static void update_baro(struct pios_sensor_baro_data *baro)
 static void update_hall(struct pios_sensor_hallsensor_data *hall)
 {
 	hallsensorData.count = hall->count;
+	hallsensorData.speed_estimate = PIXCAR_UpdateCarSpeed(hallsensorData.count);
 	HallSensorSet(&hallsensorData);
 }
 

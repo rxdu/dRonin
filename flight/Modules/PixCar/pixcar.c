@@ -133,6 +133,14 @@ void PIXCAR_GetNavigationDesired(struct pios_can_cmd_data * cmd)
 	cmd->throttle = prev_can_cmd_data.throttle;
 }
 
+float PIXCAR_UpdateCarSpeed(uint16_t hall_count)
+{
+	float latest_speed = 1.0e6/(hall_count * 6.0)/GEAR_RATIO*(M_PI*WHEEL_DIAMETER);
+	float speed_est = latest_speed;
+
+	return speed_est;
+}
+
 /**
  * Called by the RTOS when the CPU is idle, used to measure the CPU idle time.
  */
