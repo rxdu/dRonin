@@ -111,13 +111,20 @@ void UAVCANNode::publishIMUData(struct CANIMURawData *imu_data)
 
     imu_msg.time_stamp = imu_data->time_stamp;
 
-    imu_msg.gyro[0] = imu_data->gyro.x;
-    imu_msg.gyro[1] = imu_data->gyro.y;
-    imu_msg.gyro[2] = imu_data->gyro.z;
+    // imu_msg.gyro[0] = imu_data->gyro.x;
+    // imu_msg.gyro[1] = imu_data->gyro.y;
+    // imu_msg.gyro[2] = imu_data->gyro.z;
 
-    imu_msg.accel[0] = imu_data->accel.x;
-    imu_msg.accel[1] = imu_data->accel.y;
-    imu_msg.accel[2] = imu_data->accel.z;
+    // imu_msg.accel[0] = imu_data->accel.x;
+    // imu_msg.accel[1] = imu_data->accel.y;
+    // imu_msg.accel[2] = imu_data->accel.z;
+    imu_msg.gyro[0] = 0.0;
+    imu_msg.gyro[1] = 1.0;
+    imu_msg.gyro[2] = 2.0;
+
+    imu_msg.accel[0] = 3.0;
+    imu_msg.accel[1] = 4.0;
+    imu_msg.accel[2] = 5.0;
 
     const int imu_pub_res = imu_pub_.broadcast(imu_msg);
     (void)imu_pub_res;
