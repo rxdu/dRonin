@@ -175,8 +175,8 @@ static void canBridgeTask(void *parameters)
 			mag_raw.mag.y = magData.y;
 			mag_raw.mag.z = magData.z;
 
-			// (void)mag_raw;
-			UAVCANNode_PublishMagData(&mag_raw);
+			(void)mag_raw;
+			// UAVCANNode_PublishMagData(&mag_raw);
 		}
 		// else
 		// 	JLinkRTTPrintf(0, "No Mag data: %ld\n",0);
@@ -192,7 +192,9 @@ static void canBridgeTask(void *parameters)
 			spd_raw.time_stamp = time_stamp;
 			spd_raw.hallsensor_count = hallData.count;
 			spd_raw.speed_estimate = hallData.speed_estimate;
-			UAVCANNode_PublishSpeedData(&spd_raw);
+
+			(void)spd_raw;
+			// UAVCANNode_PublishSpeedData(&spd_raw);
 
 			// JLinkRTTPrintf(0, "Speed: %ld\n", spd_raw.speed);
 		}
