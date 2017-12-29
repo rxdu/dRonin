@@ -28,7 +28,8 @@
 # of this source file; otherwise redistribution is prohibited.
 
 include $(MAKE_INC_DIR)/firmware-defs.mk
-include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
+# include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
+include $(FLIGHT)/Modules/CANTalk/libcanard/libcanard.mk
 
 # Set developer code and compile options
 # Set to YES for debugging
@@ -41,11 +42,13 @@ MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl
-MODULES += CANBridge
+# MODULES += CANBridge
 MODULES += PixCar
 #MODULES += Stabilization
 #MODULES += FirmwareIAP
 #MODULES += Telemetry
+# MODULES += libcanard
+MODULES += CANTalk
 
 # OPTMODULES += GPS
 # OPTMODULES += AltitudeHold 
@@ -72,7 +75,7 @@ MODULES += PixCar
 # OPTMODULES += UAVOCrossfireTelemetry
 
 # List of C++ Modules
-include $(FLIGHT)/Modules/UAVCANNode/pios_uavcan_node.mk
+# include $(FLIGHT)/Modules/UAVCANNode/pios_uavcan_node.mk
 
 # Paths
 OPUAVOBJINC = $(OPUAVOBJ)/inc
@@ -197,6 +200,7 @@ EXTRAINCDIRS += $(FLIGHT)/Modules/RTT
 EXTRAINCDIRS += $(FLIGHT)/Modules/TestTask
 EXTRAINCDIRS += $(FLIGHT)/Modules/CANBridge
 EXTRAINCDIRS += $(FLIGHT)/Modules/PixCar
+EXTRAINCDIRS += $(FLIGHT)/Modules/CANTalk/libcanard
 
 EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${OPTMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
 

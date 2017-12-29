@@ -37,7 +37,7 @@
 #include "control.h"
 #include "transmitter_control.h"
 #include "pios_thread.h"
-#include "uavcan_interface.h"
+// #include "uavcan_interface.h"
 
 #include "altitudeholddesired.h"
 #include "altitudeholdsettings.h"

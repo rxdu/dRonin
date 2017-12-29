@@ -399,11 +399,6 @@ static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
 	
 	// JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
 }
-
-// uint16_t PIOS_TIM_GetHallSensorReading()
-// {
-// 	return hall_sensor_reading;
-// }
  
 static struct pios_queue *hallsensor_queue;
 static struct pios_sensor_hallsensor_data hall_data;
