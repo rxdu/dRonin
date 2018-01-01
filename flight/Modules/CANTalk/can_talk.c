@@ -5,7 +5,7 @@
  * Description: 
  * 
  * Copyright (c) 2017 Ruixiang Du (rdu)
- */ 
+ */
 
 #include "openpilot.h"
 #include "pios_queue.h"
@@ -23,7 +23,7 @@
 #include "jlink_rtt.h"
 
 // Private constants
-#define STACK_SIZE_BYTES 1024*8
+#define STACK_SIZE_BYTES 1024 * 8
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
 
@@ -42,14 +42,14 @@ static struct pios_queue *magQueue;
 static struct pios_queue *speedQueue;
 
 // libcanard
-static CanardInstance canard;                   
-static uint8_t canard_memory_pool[1024];     
+static CanardInstance *canard;
+static uint8_t canard_memory_pool[1024];
 static uint8_t node_health = UAVCAN_NODE_HEALTH_OK;
-static uint8_t node_mode   = UAVCAN_NODE_MODE_INITIALIZATION;
+static uint8_t node_mode = UAVCAN_NODE_MODE_INITIALIZATION;
 
 // Private functions
 static void canTalkTask(void *parameters);
-static void updateCANNodeStatus();
+static void updateCANNodeStatus(bool print_mem_stat);
 void makeNodeStatusMessage(uint8_t buffer[UAVCAN_NODE_STATUS_MESSAGE_SIZE]);
 void processTxRxOnce(int timeout_msec);
 
@@ -76,9 +76,10 @@ int32_t CANTalkStart()
 	/* Delay system */
 	PIOS_DELAY_Init();
 
-    // Initialize libcanard    
-    canardInit(&canard, canard_memory_pool, sizeof(canard_memory_pool), onTransferReceived, shouldAcceptTransfer, NULL);
-    canard.node_id = 16;
+	// Initialize libcanard
+	canard = getCanardInstance();
+	canardInit(canard, canard_memory_pool, sizeof(canard_memory_pool), onTransferReceived, shouldAcceptTransfer, NULL);
+	canard->node_id = 16;
 
 	// Start main task
 	taskHandle = PIOS_Thread_Create(canTalkTask, "CANTalk", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);
@@ -123,6 +124,7 @@ static void canTalkTask(void *parameters)
 	// hallData.count = 0;
 
 	uint32_t sys_time = PIOS_Thread_Systime();
+	static uint32_t loop_count = 0;
 	while (1)
 	{
 		// static uint32_t time_label = 0;
@@ -161,7 +163,7 @@ static void canTalkTask(void *parameters)
 		// 	imu_raw.accel.y = accelsData.y;
 		// 	imu_raw.accel.z = accelsData.z;
 
-        //     (void)imu_raw;
+		//     (void)imu_raw;
 		// 	// UAVCANNode_PublishIMUData(&imu_raw);
 		// }
 		// else
@@ -209,122 +211,123 @@ static void canTalkTask(void *parameters)
 		// PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
 		// UAVCANNode_SpinNode(UAVCAN_SPIN_TIMEOUT_MS);
 
-        processTxRxOnce(0);
-        updateCANNodeStatus();
+		processTxRxOnce(0);
+
+		if (loop_count++ % 200 == 0)
+			updateCANNodeStatus(false);
 
 		PIOS_Thread_Sleep_Until(&sys_time, UPDATE_PERIOD_MS);
 	}
 }
 
-
-void updateCANNodeStatus()
+void updateCANNodeStatus(bool print_mem_stat)
 {
-
-    /*
+	/*
      * Purging transfers that are no longer transmitted. This will occasionally free up some memory.
      */
-    canardCleanupStaleTransfers(&canard, getMonotonicTimestampUSec());
+	canardCleanupStaleTransfers(canard, getMonotonicTimestampUSec());
 
-    // /*
-    //  * Printing the memory usage statistics.
-    //  */
-    // {
-    //     const CanardPoolAllocatorStatistics stats = canardGetPoolAllocatorStatistics(&canard);
-    //     const unsigned peak_percent = 100U * stats.peak_usage_blocks / stats.capacity_blocks;
+	/*
+	 * Printing the memory usage statistics.
+	 */
+	if(print_mem_stat)
+	{
+	    const CanardPoolAllocatorStatistics stats = canardGetPoolAllocatorStatistics(canard);
+	    const unsigned peak_percent = 100U * stats.peak_usage_blocks / stats.capacity_blocks;
 
-    //     printf("Memory pool stats: capacity %u blocks, usage %u blocks, peak usage %u blocks (%u%%)\n",
-    //            stats.capacity_blocks, stats.current_usage_blocks, stats.peak_usage_blocks, peak_percent);
+	    JLinkRTTPrintf(0, "Memory pool stats: capacity %u blocks, usage %u blocks, peak usage %u blocks (%u%%)\n",
+	           stats.capacity_blocks, stats.current_usage_blocks, stats.peak_usage_blocks, peak_percent);
 
-    //     /*
-    //      * The recommended way to establish the minimal size of the memory pool is to stress-test the application and
-    //      * record the worst case memory usage.
-    //      */
-    //     if (peak_percent > 70)
-    //     {
-    //         puts("WARNING: ENLARGE MEMORY POOL");
-    //     }
-    // }
+	    /*
+	     * The recommended way to establish the minimal size of the memory pool is to stress-test the application and
+	     * record the worst case memory usage.
+	     */
+	    if (peak_percent > 70)
+	    {
+	        JLinkRTTPrintf(0, "WARNING: ENLARGE MEMORY POOL", 0);
+	    }
+	}
 
-    /*
+	/*
      * Transmitting the node status message periodically.
      */
-    {
-        uint8_t buffer[UAVCAN_NODE_STATUS_MESSAGE_SIZE];
-        makeNodeStatusMessage(buffer);
+	{
+		uint8_t buffer[UAVCAN_NODE_STATUS_MESSAGE_SIZE];
+		makeNodeStatusMessage(buffer);
 
-		JLinkRTTPrintf(0, "buffer: %d, %d, %d, %d, %d, %d, %d\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
+		// JLinkRTTPrintf(0, "buffer: %d, %d, %d, %d, %d, %d, %d\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
 
-        static uint8_t transfer_id;
+		static uint8_t transfer_id;
 
-        const int bc_res = canardBroadcast(&canard, UAVCAN_NODE_STATUS_DATA_TYPE_SIGNATURE,
-                                           UAVCAN_NODE_STATUS_DATA_TYPE_ID, &transfer_id, CANARD_TRANSFER_PRIORITY_LOW,
-                                           buffer, UAVCAN_NODE_STATUS_MESSAGE_SIZE);
-        if (bc_res <= 0)
-        {
-            // (void)fprintf(stderr, "Could not broadcast node status; error %d\n", bc_res);
-            JLinkRTTPrintf(0, "Could not broadcast node status; error %d\n", bc_res);
-        }
-    }
+		const int bc_res = canardBroadcast(canard, UAVCAN_NODE_STATUS_DATA_TYPE_SIGNATURE,
+										   UAVCAN_NODE_STATUS_DATA_TYPE_ID, &transfer_id, CANARD_TRANSFER_PRIORITY_LOW,
+										   buffer, UAVCAN_NODE_STATUS_MESSAGE_SIZE);
+		if (bc_res <= 0)
+			JLinkRTTPrintf(0, "Could not broadcast node status; error %d\n", bc_res);
+	}
 
-    node_mode = UAVCAN_NODE_MODE_OPERATIONAL;
+	/*
+	 * Set node mode to be operational.
+	 */
+	node_mode = UAVCAN_NODE_MODE_OPERATIONAL;
 }
 
 void makeNodeStatusMessage(uint8_t buffer[UAVCAN_NODE_STATUS_MESSAGE_SIZE])
 {
-    memset(buffer, 0, UAVCAN_NODE_STATUS_MESSAGE_SIZE);
+	memset(buffer, 0, UAVCAN_NODE_STATUS_MESSAGE_SIZE);
 
-    static uint32_t started_at_sec = 0;
-    if (started_at_sec == 0)
-    {
-        started_at_sec = (uint32_t)(getMonotonicTimestampUSec() / 1000000U);
-    }
+	static uint32_t started_at_sec = 0;
+	if (started_at_sec == 0)
+	{
+		started_at_sec = (uint32_t)(getMonotonicTimestampUSec() / 1000000U);
+	}
 
-    const uint32_t uptime_sec = (uint32_t)((getMonotonicTimestampUSec() / 1000000U) - started_at_sec);
+	const uint32_t uptime_sec = (uint32_t)((getMonotonicTimestampUSec() / 1000000U) - started_at_sec);
 
-    /*
+	/*
      * Here we're using the helper for demonstrational purposes; in this simple case it could be preferred to
      * encode the values manually.
      */
-    canardEncodeScalar(buffer,  0, 32, &uptime_sec);
-    canardEncodeScalar(buffer, 32,  2, &node_health);
-    canardEncodeScalar(buffer, 34,  3, &node_mode);
+	canardEncodeScalar(buffer, 0, 32, &uptime_sec);
+	canardEncodeScalar(buffer, 32, 2, &node_health);
+	canardEncodeScalar(buffer, 34, 3, &node_mode);
 }
 
 void processTxRxOnce(int timeout_msec)
 {
-    // Transmitting
-    for (const CanardCANFrame* txf = NULL; (txf = canardPeekTxQueue(&canard)) != NULL;)
-    {
-        const int tx_res = PIOS_canardTransmit(txf);
-        if (tx_res < 0)         // Failure - drop the frame and report
-        {
-            canardPopTxQueue(&canard);
-            // (void)fprintf(stderr, "Transmit error %d, frame dropped, errno '%s'\n", tx_res, strerror(errno));
-        }
-        else if (tx_res > 0)    // Success - just drop the frame
-        {
-            canardPopTxQueue(&canard);
-        }
-        else                    // Timeout - just exit and try again later
-        {
-            break;
-        }
-    }
+	// Transmitting
+	for (const CanardCANFrame *txf = NULL; (txf = canardPeekTxQueue(canard)) != NULL;)
+	{
+		const int tx_res = PIOS_canardTransmit(txf);
+		if (tx_res < 0) // Failure - drop the frame and report
+		{
+			canardPopTxQueue(canard);
+			JLinkRTTPrintf(0, "Transmit error %d, frame dropped\n", tx_res);
+		}
+		else if (tx_res > 0) // Success - just drop the frame
+		{
+			canardPopTxQueue(canard);
+		}
+		else // Timeout - just exit and try again later
+		{
+			break;
+		}
+	}
 
-    // // Receiving
-    // CanardCANFrame rx_frame;
-    // const uint64_t timestamp = getMonotonicTimestampUSec();
-    // const int rx_res = socketcanReceive(socketcan, &rx_frame, timeout_msec);
-    // if (rx_res < 0)             // Failure - report
-    // {
-    //     (void)fprintf(stderr, "Receive error %d, errno '%s'\n", rx_res, strerror(errno));
-    // }
-    // else if (rx_res > 0)        // Success - process the frame
-    // {
-    //     canardHandleRxFrame(&canard, &rx_frame, timestamp);
-    // }
-    // else
-    // {
-    //     ;                       // Timeout - nothing to do
-    // }
+	// // Receiving
+	// CanardCANFrame rx_frame;
+	// const uint64_t timestamp = getMonotonicTimestampUSec();
+	// const int rx_res = socketcanReceive(socketcan, &rx_frame, timeout_msec);
+	// if (rx_res < 0)             // Failure - report
+	// {
+	//     (void)fprintf(stderr, "Receive error %d, errno '%s'\n", rx_res, strerror(errno));
+	// }
+	// else if (rx_res > 0)        // Success - process the frame
+	// {
+	//     canardHandleRxFrame(canard, &rx_frame, timestamp);
+	// }
+	// else
+	// {
+	//     ;                       // Timeout - nothing to do
+	// }
 }

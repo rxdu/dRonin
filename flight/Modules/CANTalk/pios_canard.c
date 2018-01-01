@@ -5,33 +5,69 @@
  * Description: 
  * 
  * Copyright (c) 2017 Ruixiang Du (rdu)
- */ 
+ */
 
 #include "pios_canard.h"
 
 #include "pios_tim.h"
 #include "pios_can.h"
 
-uint64_t getMonotonicTimestampUSec(void)
+static CanardInstance canard;
+
+CanardInstance *getCanardInstance()
 {
-    return PIOS_UAVCAN_TIM_GetMonoTime(); 
+    return &canard;
 }
 
-int PIOS_canardTransmit(const CanardCANFrame* const frame)
+uint64_t getMonotonicTimestampUSec(void)
+{
+    return PIOS_UAVCAN_TIM_GetMonoTime();
+}
+
+int PIOS_canardTransmit(const CanardCANFrame *const frame)
 {
     return PIOS_CAN_TxCANFrame(frame->id, true, frame->data, frame->data_len);
 }
 
-void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
+void PIOS_canardReceive(const CanardCANFrame *frame)
 {
-
+    const uint64_t timestamp = getMonotonicTimestampUSec();
+    canardHandleRxFrame(&canard, frame, timestamp);
 }
 
-bool shouldAcceptTransfer(const CanardInstance* ins,
-                                 uint64_t* out_data_type_signature,
-                                 uint16_t data_type_id,
-                                 CanardTransferType transfer_type,
-                                 uint8_t source_node_id)
+void onTransferReceived(CanardInstance *ins, CanardRxTransfer *transfer)
 {
-    return true;
+}
+
+bool shouldAcceptTransfer(const CanardInstance *ins,
+                          uint64_t *out_data_type_signature,
+                          uint16_t data_type_id,
+                          CanardTransferType transfer_type,
+                          uint8_t source_node_id)
+{
+    (void)source_node_id;
+
+    if (canardGetLocalNodeID(ins) == CANARD_BROADCAST_NODE_ID)
+    {
+        /*
+         * If we're in the process of allocation of dynamic node ID, accept only relevant transfers.
+         */
+        if ((transfer_type == CanardTransferTypeBroadcast) &&
+            (data_type_id == UAVCAN_NODE_ID_ALLOCATION_DATA_TYPE_ID))
+        {
+            *out_data_type_signature = UAVCAN_NODE_ID_ALLOCATION_DATA_TYPE_SIGNATURE;
+            return true;
+        }
+    }
+    else
+    {
+        if ((transfer_type == CanardTransferTypeRequest) &&
+            (data_type_id == UAVCAN_GET_NODE_INFO_DATA_TYPE_ID))
+        {
+            *out_data_type_signature = UAVCAN_GET_NODE_INFO_DATA_TYPE_SIGNATURE;
+            return true;
+        }
+    }
+
+    return false;
 }
