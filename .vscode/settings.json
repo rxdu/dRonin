@@ -78,6 +78,7 @@
         "*.ipp": "cpp",
         "valarray": "cpp",
         "pios_hmc5983.h": "c",
-        "carnavigationdesired.h": "c"
+        "carnavigationdesired.h": "c",
+        "pios_canard.h": "c"
     }
 }

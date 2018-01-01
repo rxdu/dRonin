@@ -200,6 +200,7 @@ EXTRAINCDIRS += $(FLIGHT)/Modules/RTT
 EXTRAINCDIRS += $(FLIGHT)/Modules/TestTask
 EXTRAINCDIRS += $(FLIGHT)/Modules/CANBridge
 EXTRAINCDIRS += $(FLIGHT)/Modules/PixCar
+EXTRAINCDIRS += $(FLIGHT)/Modules/CANTalk
 EXTRAINCDIRS += $(FLIGHT)/Modules/CANTalk/libcanard
 
 EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${OPTMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc

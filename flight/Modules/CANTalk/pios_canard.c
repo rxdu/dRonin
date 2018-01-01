@@ -12,6 +12,8 @@
 #include "pios_tim.h"
 #include "pios_can.h"
 
+#include "jlink_rtt.h"
+
 static CanardInstance canard;
 
 CanardInstance *getCanardInstance()
@@ -29,14 +31,20 @@ int PIOS_canardTransmit(const CanardCANFrame *const frame)
     return PIOS_CAN_TxCANFrame(frame->id, true, frame->data, frame->data_len);
 }
 
-void PIOS_canardReceive(const CanardCANFrame *frame)
+void PIOS_canardReceive(uint32_t id, const uint8_t *data, uint8_t data_len)
 {
-    const uint64_t timestamp = getMonotonicTimestampUSec();
-    canardHandleRxFrame(&canard, frame, timestamp);
+    CanardCANFrame rx_frame;
+    rx_frame.id = id;
+    rx_frame.data_len = data_len;
+    for(int i = 0; i < data_len; i++)
+        rx_frame.data[i] = data[i]; 
+	const uint64_t timestamp = getMonotonicTimestampUSec();
+    canardHandleRxFrame(&canard, &rx_frame, timestamp);
 }
 
 void onTransferReceived(CanardInstance *ins, CanardRxTransfer *transfer)
 {
+    JLinkRTTPrintf(0, "Received something\n",0);
 }
 
 bool shouldAcceptTransfer(const CanardInstance *ins,
