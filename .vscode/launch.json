@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "debug_fw_piracer",
+            "name": "debug_fw_pixracer",
             "type": "cppdbg",
             "request": "launch",
             "miDebuggerPath": "${workspaceRoot}/tools/gcc-arm-none-eabi-6-2017-q2-update/bin/arm-none-eabi-gdb",

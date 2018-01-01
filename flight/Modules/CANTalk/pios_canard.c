@@ -19,7 +19,7 @@ uint64_t getMonotonicTimestampUSec(void)
 
 int PIOS_canardTransmit(const CanardCANFrame* const frame)
 {
-    return PIOS_CAN_TxCANFrame(frame->id, frame->data, frame->data_len);
+    return PIOS_CAN_TxCANFrame(frame->id, true, frame->data, frame->data_len);
 }
 
 void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)

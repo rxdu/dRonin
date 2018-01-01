@@ -252,6 +252,8 @@ void updateCANNodeStatus()
         uint8_t buffer[UAVCAN_NODE_STATUS_MESSAGE_SIZE];
         makeNodeStatusMessage(buffer);
 
+		JLinkRTTPrintf(0, "buffer: %d, %d, %d, %d, %d, %d, %d\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
+
         static uint8_t transfer_id;
 
         const int bc_res = canardBroadcast(&canard, UAVCAN_NODE_STATUS_DATA_TYPE_SIGNATURE,

@@ -144,7 +144,7 @@ struct pios_can_alarm_message {
 
 //! Transmit a data message with a particular message ID
 int32_t PIOS_CAN_TxData(uintptr_t id, enum pios_can_messages, uint8_t *data);
-int32_t PIOS_CAN_TxCANFrame(uint32_t id, const uint8_t *data, uint8_t data_len);
+int32_t PIOS_CAN_TxCANFrame(uint32_t id, bool is_id_ext, const uint8_t *data, uint8_t data_len);
 
 //! Get a queue to receive messages of a particular message ID
 struct pios_queue * PIOS_CAN_RegisterMessageQueue(uintptr_t id, enum pios_can_messages msg_id);

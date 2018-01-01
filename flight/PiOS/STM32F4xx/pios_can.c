@@ -477,13 +477,23 @@ int32_t PIOS_CAN_TxData(uintptr_t id, enum pios_can_messages msg_id, uint8_t *da
  * @param[in] data Pointer to data message
  * @returns number of bytes sent if successful, -1 if not
  */
-int32_t PIOS_CAN_TxCANFrame(uint32_t id, const uint8_t *data, uint8_t data_len)
+int32_t PIOS_CAN_TxCANFrame(uint32_t id, bool is_id_ext, const uint8_t *data, uint8_t data_len)
 {
 	// Format and send the message
 	CanTxMsg msg;
-	msg.StdId = id & 0x7FF;
-	msg.ExtId = 0;
-	msg.IDE = CAN_ID_STD;
+
+	if(is_id_ext)
+	{
+		msg.StdId = 0;
+		msg.ExtId = id;
+		msg.IDE = CAN_ID_EXT;
+	}
+	else
+	{
+		msg.StdId = id & 0x7FF;
+		msg.ExtId = 0;
+		msg.IDE = CAN_ID_STD;
+	}
 	msg.RTR = CAN_RTR_DATA;
 	msg.DLC = (data_len > 8) ? 8 : data_len;
 	memcpy(msg.Data, data, msg.DLC);
