@@ -13,19 +13,16 @@
 
 void Pixcar_PublishSpeedData(struct CANSpeedRawData *spd_data)
 {
+    // make can message binary compatible with uavcan
     uint8_t can_frame[8];
+    static uint8_t dummy_byte = 0;
+    can_frame[0] = 0x000000ff & ((uint32_t)spd_data->time_stamp);
+    can_frame[1] = 0x000000ff & ((uint32_t)spd_data->time_stamp >> 8);
+    can_frame[2] = 0x000000ff & ((uint32_t)spd_data->time_stamp >> 16);
+    can_frame[3] = 0x000000ff & ((uint32_t)spd_data->time_stamp >> 24);
+    can_frame[4] = dummy_byte++;
 
-    can_frame[0] = 0x000000ff & (spd_data->time_stamp);
-    can_frame[1] = 0x000000ff & (spd_data->time_stamp >> 8);
-    can_frame[2] = 0x000000ff & (spd_data->time_stamp >> 16);
-    can_frame[3] = 0x000000ff & (spd_data->time_stamp >> 24);
-
-    can_frame[4] = 0x000000ff & (spd_data->speed_estimate);
-    can_frame[5] = 0x000000ff & (spd_data->speed_estimate >> 8);
-    can_frame[6] = 0x000000ff & (spd_data->speed_estimate >> 16);
-    can_frame[7] = 0x000000ff & (spd_data->speed_estimate >> 24);
-
-    // PIOS_CAN_TxCANFrame()
+    PIOS_CAN_TxCANFrame(CANTALK_PIXCAR_CARSPEED_DATA_TYPE_ID, true, can_frame, 5);
 }
 
 void Pixcar_CanTalkReceive(uint32_t id, const uint8_t *data, uint8_t data_len)
