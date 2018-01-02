@@ -28,7 +28,6 @@
 # of this source file; otherwise redistribution is prohibited.
 
 include $(MAKE_INC_DIR)/firmware-defs.mk
-# include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
 include $(FLIGHT)/Modules/CANTalk/libcanard/libcanard.mk
 
 # Set developer code and compile options
@@ -38,16 +37,14 @@ DEBUG ?= NO
 # List of modules to include
 MODULES = RTT
 # MODULES = TestTask
-# MODULES += Sensors
+MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl
-# MODULES += CANBridge
 MODULES += PixCar
 #MODULES += Stabilization
 #MODULES += FirmwareIAP
 #MODULES += Telemetry
-# MODULES += libcanard
 MODULES += CANTalk
 
 # OPTMODULES += GPS
