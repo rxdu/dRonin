@@ -28,7 +28,6 @@
 # of this source file; otherwise redistribution is prohibited.
 
 include $(MAKE_INC_DIR)/firmware-defs.mk
-include $(FLIGHT)/Modules/CANTalk/libcanard/libcanard.mk
 
 # Set developer code and compile options
 # Set to YES for debugging
@@ -37,7 +36,7 @@ DEBUG ?= NO
 # List of modules to include
 MODULES = RTT
 # MODULES = TestTask
-MODULES += Sensors
+# MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl

@@ -1,3 +1,12 @@
+/* 
+ * pixcar.c
+ * 
+ * Created on: Nov 04, 2017
+ * Description: 
+ * 
+ * Copyright (c) 2017 Ruixiang Du (rdu)
+ */ 
+
 #include "openpilot.h"
 #include "pios_thread.h"
 #include "pios_queue.h"
@@ -18,8 +27,8 @@ extern uintptr_t pios_can_id;
 #define STACK_SIZE_BYTES 1200
 #endif
 
-#define TASK_PRIORITY PIOS_THREAD_PRIO_LOW
-#define UPDATE_PERIOD_MS 500
+#define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
+#define UPDATE_PERIOD_MS 20
 
 #define CAN_RX_TIMEOUT_MS 10
 
@@ -32,6 +41,9 @@ static uint32_t idleCounterClear;
 
 static struct pios_can_cmd_data prev_can_cmd_data;
 
+static HallSensorData hallsensorData;
+static struct pios_sensor_hallsensor_data hallsensor_data;
+
 static struct pios_queue *hallsensor_queue;
 static struct pios_queue *navigation_desired_queue;
 
@@ -39,6 +51,7 @@ static struct pios_thread *taskHandle;
 
 // Private functions
 static void pixCarTask(void *parameters);
+static void update_hallsensor_data(struct pios_sensor_hallsensor_data *hall);
 
 /**
  * Module starting
@@ -66,6 +79,11 @@ int32_t PixCarTaskInitialize()
 	navigation_desired_queue = PIOS_Queue_Create(CAN_CMD_QUEUE_SIZE, sizeof(UAVObjEvent));
 	CarNavigationDesiredConnectQueue(navigation_desired_queue);
 
+	if(HallSensorInitialize() == -1)
+		return -1;
+
+	hallsensor_queue = PIOS_Queue_Create(HALL_SENSOR_QUEUE_SIZE, sizeof(struct pios_sensor_hallsensor_data));
+
 	return 0;
 }
 
@@ -78,10 +96,14 @@ static void pixCarTask(void *parameters)
 {
 	while (1)
 	{
+		if (PIOS_Queue_Receive(hallsensor_queue, &hallsensor_data, 0) != false) 
+		{			
+			update_hallsensor_data(&hallsensor_data);
+		}
+
 		PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
 	}
 }
-
 
 struct pios_queue *PIXCAR_GetHallSensorQueue(void)
 {
@@ -89,6 +111,25 @@ struct pios_queue *PIXCAR_GetHallSensorQueue(void)
 		hallsensor_queue = PIOS_Queue_Create(HALL_SENSOR_QUEUE_SIZE, sizeof(struct pios_sensor_hallsensor_data));
 
 	return hallsensor_queue;
+}
+
+/**
+ * Update the hall sensor uavo from the data from the hall sensor queue
+ * @param [in] baro raw hall sensor data
+ */
+static void update_hallsensor_data(struct pios_sensor_hallsensor_data *hall)
+{
+	hallsensorData.count = hall->count;
+	hallsensorData.speed_estimate = PIXCAR_UpdateCarSpeed(hallsensorData.count);
+	HallSensorSet(&hallsensorData);
+}
+
+float PIXCAR_UpdateCarSpeed(uint16_t hall_count)
+{
+	float latest_speed = 1.0e6/(hall_count * 6.0)/GEAR_RATIO*(M_PI*WHEEL_DIAMETER);
+	float speed_est = latest_speed;
+
+	return speed_est;
 }
 
 void PIXCAR_ResetNavigationDesired()
@@ -131,14 +172,6 @@ void PIXCAR_GetNavigationDesired(struct pios_can_cmd_data * cmd)
 	//	otherwise use previous values
 	cmd->steering = prev_can_cmd_data.steering;
 	cmd->throttle = prev_can_cmd_data.throttle;
-}
-
-float PIXCAR_UpdateCarSpeed(uint16_t hall_count)
-{
-	float latest_speed = 1.0e6/(hall_count * 6.0)/GEAR_RATIO*(M_PI*WHEEL_DIAMETER);
-	float speed_est = latest_speed;
-
-	return speed_est;
 }
 
 /**

@@ -39,10 +39,9 @@
 
 #include "pios_can_priv.h"
 
-#ifdef PIOS_INCLUDE_UAVCAN
-#include "pios_canard.h"
+#ifdef PIOS_INCLUDE_CANTALK
+#include "pixcar_can.h"
 #endif
-
 #include "jlink_rtt.h"
 
 /* Provide a COM driver */
@@ -247,7 +246,7 @@ bool pios_can_valid_msg(enum pios_can_messages msg_id)
 	return (msg_id >= 0 && msg_id < PIOS_CAN_LAST);
 }
 
-#ifndef PIOS_INCLUDE_UAVCAN
+#ifndef PIOS_INCLUDE_CANTALK
 /**
  * Process received CAN messages and push them out any corresponding
  * queues. Called from ISR.
@@ -394,17 +393,13 @@ static void PIOS_CAN_RxGeneric(void)
 	CanRxMsg RxMessage;
 	CAN_Receive(can_dev->cfg->regs, can_dev->rx_fifo ? CAN_FIFO1 : CAN_FIFO0, &RxMessage);
 
-#ifdef PIOS_INCLUDE_UAVCAN
-	// convert CAN ID to UAVCAN ID
+#ifdef PIOS_INCLUDE_CANTALK
 	uint32_t uavcan_id = 0;
 	if(RxMessage.IDE == CAN_Id_Standard)
 		uavcan_id = RxMessage.StdId;
 	else
-		uavcan_id = RxMessage.ExtId | CANARD_CAN_FRAME_EFF;
-	if ((uavcan_id & RxMessage.RTR) != 0)
-		uavcan_id |= CANARD_CAN_FRAME_RTR;
-	// pass the CAN frame to libcanard
-	PIOS_canardReceive(uavcan_id, RxMessage.Data, RxMessage.DLC);
+		uavcan_id = RxMessage.ExtId;
+	Pixcar_CanTalkReceive(uavcan_id, RxMessage.Data, RxMessage.DLC);
 #else
 	bool rx_need_yield = false;
 	if (RxMessage.StdId == CAN_COM_ID) {
