@@ -231,7 +231,7 @@ CFLAGS += -O0
 CFLAGS += -DGENERAL_COV
 CFLAGS += -finstrument-functions -ffixed-r10
 else
-CFLAGS += -Os -fconserve-stack
+CFLAGS += -O0 -fconserve-stack
 endif
 
 

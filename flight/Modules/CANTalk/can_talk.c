@@ -79,7 +79,7 @@ int32_t CANTalkStart()
 	// Initialize libcanard
 	canard = getCanardInstance();
 	canardInit(canard, canard_memory_pool, sizeof(canard_memory_pool), onTransferReceived, shouldAcceptTransfer, NULL);
-	canard->node_id = 16;
+	canardSetLocalNodeID(canard, 16);
 
 	// Start main task
 	taskHandle = PIOS_Thread_Create(canTalkTask, "CANTalk", STACK_SIZE_BYTES, NULL, TASK_PRIORITY);

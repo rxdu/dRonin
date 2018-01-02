@@ -400,10 +400,9 @@ static void PIOS_CAN_RxGeneric(void)
 	if(RxMessage.IDE == CAN_Id_Standard)
 		uavcan_id = RxMessage.StdId;
 	else
-		uavcan_id = RxMessage.ExtId;
-
+		uavcan_id = RxMessage.ExtId | CANARD_CAN_FRAME_EFF;
 	if ((uavcan_id & RxMessage.RTR) != 0)
-			uavcan_id |= CANARD_CAN_FRAME_RTR;
+		uavcan_id |= CANARD_CAN_FRAME_RTR;
 	// pass the CAN frame to libcanard
 	PIOS_canardReceive(uavcan_id, RxMessage.Data, RxMessage.DLC);
 #else

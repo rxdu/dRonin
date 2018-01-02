@@ -39,7 +39,6 @@
 
 #define UNIQUE_ID_LENGTH_BYTES                                      16
 
-
 uint64_t getMonotonicTimestampUSec(void);
 
 int PIOS_canardTransmit(const CanardCANFrame* const frame);

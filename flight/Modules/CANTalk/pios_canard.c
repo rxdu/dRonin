@@ -33,13 +33,15 @@ int PIOS_canardTransmit(const CanardCANFrame *const frame)
 
 void PIOS_canardReceive(uint32_t id, const uint8_t *data, uint8_t data_len)
 {
+    const uint64_t timestamp = getMonotonicTimestampUSec();
+
     CanardCANFrame rx_frame;
     rx_frame.id = id;
     rx_frame.data_len = data_len;
     for(int i = 0; i < data_len; i++)
         rx_frame.data[i] = data[i]; 
-	const uint64_t timestamp = getMonotonicTimestampUSec();
-    canardHandleRxFrame(&canard, &rx_frame, timestamp);
+        
+	canardHandleRxFrame(&canard, &rx_frame, timestamp);
 }
 
 void onTransferReceived(CanardInstance *ins, CanardRxTransfer *transfer)
@@ -54,6 +56,8 @@ bool shouldAcceptTransfer(const CanardInstance *ins,
                           uint8_t source_node_id)
 {
     (void)source_node_id;
+    if(source_node_id == 2)
+        return true;
 
     if (canardGetLocalNodeID(ins) == CANARD_BROADCAST_NODE_ID)
     {
