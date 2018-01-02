@@ -110,7 +110,7 @@ static void canTalkTask(void *parameters)
 
 			(void)spd_raw;
 			// UAVCANNode_PublishSpeedData(&spd_raw);
-			Pixcar_PublishSpeedData(&spd_raw);
+			// Pixcar_PublishSpeedData(&spd_raw);
 
 			// JLinkRTTPrintf(0, "Speed: %ld\n", spd_raw.speed);
 		}
