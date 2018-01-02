@@ -51,6 +51,8 @@
 #include "carmanualcontrolsettings.h"
 #include "carnavigationdesired.h"
 
+#include "jlink_rtt.h"
+
 // Private constants
 #if defined(PIOS_MANUAL_STACK_SIZE)
 #define STACK_SIZE_BYTES PIOS_MANUAL_STACK_SIZE
@@ -60,7 +62,13 @@
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGHEST
 #define UPDATE_PERIOD_MS 20
-#define CTRL_HEARTBEAT_MULTIPLIER	25	/* perios = CTRL_HEARTBEAT_MULTIPLIER * UPDATE_PERIOD_MS */
+#define CTRL_HEARTBEAT_MULTIPLIER	25	/* period = CTRL_HEARTBEAT_MULTIPLIER * UPDATE_PERIOD_MS */
+
+#define GO_STATE(x) \
+				do { \
+					arm_state = (x); \
+					arm_state_time = (now); \
+				} while (0)
 
 // Private variables
 static struct pios_thread *taskHandle;
@@ -70,10 +78,7 @@ static void manualControlTask(void *parameters);
 static DrivingStatusControlSourceOptions control_source_select();
 
 bool vehicle_is_armed = false;
-// static uint32_t control_status_led = 0;
-
-// This is exposed to transmitter_control
-bool ok_to_arm(void);
+static uint32_t control_status_led = 0;
 
 /**
  * Module starting
@@ -119,7 +124,6 @@ static void manualControlTask(void *parameters)
 
 	// TODO: Stop car before run
 	
-
 	uint32_t arm_time = 1000;
 
 	enum arm_state {
@@ -147,26 +151,18 @@ static void manualControlTask(void *parameters)
 			control_source_select();
 		bool reset_controller = control_selection != last_control_selection;
 
-		int ret = -1;
-
 		enum control_status status = transmitter_control_get_status();
 
-		// This logic would be better collapsed into control_source_select but
-		// in the case of the tablet we need to be able to abort and fall back
-		// to failsafe for now
 		switch(control_selection) {
 		case DRIVINGSTATUS_CONTROLSOURCE_TRANSMITTER:
-			ret = transmitter_control_select(reset_controller);
+			transmitter_control_select(reset_controller);
 			break;		
 		default:
 			/* Fall through into failsafe */
-			break;
-		}
-
-		if (ret) {
 			failsafe_control_select(last_control_selection !=
 					DRIVINGSTATUS_CONTROLSOURCE_FAILSAFE);
 			control_selection = DRIVINGSTATUS_CONTROLSOURCE_FAILSAFE;
+			break;
 		}
 
 		if (control_selection != last_control_selection) {
@@ -175,12 +171,6 @@ static void manualControlTask(void *parameters)
 		}
 
 		uint32_t now = PIOS_Thread_Systime();
-
-#define GO_STATE(x) \
-				do { \
-					arm_state = (x); \
-					arm_state_time = (now); \
-				} while (0)
 
 		/* Global state transitions: weird stuff means disarmed +
 		 * safety hold-down.
@@ -194,7 +184,8 @@ static void manualControlTask(void *parameters)
 		 * no-arming-holddown.  This also stretches transient alarms
 		 * and makes them more visible.
 		 */
-		if (!ok_to_arm() && (arm_state != ARM_STATE_ARMED)) {
+		// if (!ok_to_arm() && (arm_state != ARM_STATE_ARMED)) {
+		if ((arm_state != ARM_STATE_ARMED)) {
 			GO_STATE(ARM_STATE_SAFETY);
 		}
 
@@ -324,8 +315,8 @@ static void manualControlTask(void *parameters)
 		PIOS_RCVR_WaitActivity(UPDATE_PERIOD_MS);
 		// PIOS_WDG_UpdateFlag(PIOS_WDG_MANUAL);
 
-		// if((control_status_led++)%CTRL_HEARTBEAT_MULTIPLIER == 0)
-		// 	PIOS_ANNUNC_Toggle(PIOS_LED_HEARTBEAT);
+		if((control_status_led++)%CTRL_HEARTBEAT_MULTIPLIER == 0)
+			PIOS_ANNUNC_Toggle(PIOS_LED_HEARTBEAT);
 	}
 }
 
@@ -339,6 +330,15 @@ static void manualControlTask(void *parameters)
  * This function is the ultimate one that controls what happens and
  * selects modes such as failsafe, transmitter control, geofencing
  * and potentially other high level modes in the future
+ * 
+ * RC Cars will be in either Failsafe mode or Transmitter mode.
+ * 
+ * Failsafe mode: set all actuator desired values to be 0
+ * 		- Triggered when no transmiter signal is received
+ * Transmitter mode: actuator desired values are set according to selected driving mode
+ * 		- Manual: control values from remote controller sticks
+ * 		- Navigation: control values from CAN bus
+ * 		- Emergency: stop the car as commanded by user from remote controller
  */
 static DrivingStatusControlSourceOptions control_source_select()
 {
@@ -350,38 +350,6 @@ static DrivingStatusControlSourceOptions control_source_select()
 	else {
 		return DRIVINGSTATUS_CONTROLSOURCE_TRANSMITTER;
 	}
-}
-
-/**
- * @brief Determine if the aircraft is safe to arm based on alarms
- * @returns True if safe to arm, false otherwise
- */
-bool ok_to_arm(void)
-{
-	// read alarms
-	SystemAlarmsData alarms;
-	SystemAlarmsGet(&alarms);
-
-	// Check each alarm
-	for (int i = 0; i < SYSTEMALARMS_ALARM_NUMELEM; i++)
-	{
-		if (alarms.Alarm[i] >= SYSTEMALARMS_ALARM_ERROR &&
-			i != SYSTEMALARMS_ALARM_GPS &&
-			i != SYSTEMALARMS_ALARM_TELEMETRY)
-		{
-			return false;
-		}
-	}
-
-	uint8_t driving_mode;
-	DrivingStatusDrivingModeGet(&driving_mode);
-
-	if (driving_mode == DRIVINGSTATUS_DRIVINGMODE_FAILSAFE) {
-		/* Separately mask FAILSAFE arming here. */
-		return false;
-	}
-
-	return true;
 }
 
 /**

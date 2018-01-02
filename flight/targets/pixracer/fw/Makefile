@@ -28,7 +28,7 @@
 # of this source file; otherwise redistribution is prohibited.
 
 include $(MAKE_INC_DIR)/firmware-defs.mk
-include $(FLIGHT)/UAVCAN/libuavcan_pios.mk
+include $(FLIGHT)/Modules/CANTalk/libcanard/libcanard.mk
 
 # Set developer code and compile options
 # Set to YES for debugging
@@ -41,12 +41,11 @@ MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl
-MODULES += UAVCANNode
-MODULES += CANBridge
 MODULES += PixCar
 #MODULES += Stabilization
 #MODULES += FirmwareIAP
 #MODULES += Telemetry
+MODULES += CANTalk
 
 # OPTMODULES += GPS
 # OPTMODULES += AltitudeHold 
@@ -73,7 +72,7 @@ MODULES += PixCar
 # OPTMODULES += UAVOCrossfireTelemetry
 
 # List of C++ Modules
-include $(FLIGHT)/Modules/UAVCANNode/pios_uavcan_node.mk
+# include $(FLIGHT)/Modules/UAVCANNode/pios_uavcan_node.mk
 
 # Paths
 OPUAVOBJINC = $(OPUAVOBJ)/inc
@@ -104,9 +103,8 @@ include $(APPLIBDIR)/ChibiOS/library.mk
 
 ## OPENPILOT CORE:
 SRC += chibi_main.c
-# CPPSRC += chibi_main.cpp
-SRC += ${OPMODULEDIR}/System/systemmod.c
-SRC += ${OPMODULEDIR}/System/rgbleds.c
+# SRC += ${OPMODULEDIR}/System/systemmod.c
+# SRC += ${OPMODULEDIR}/System/rgbleds.c
 SRC += pios_board.c
 SRC += pios_usb_board_data.c
 SRC += $(OPUAVOBJ)/uavobjectmanager.c
@@ -199,6 +197,8 @@ EXTRAINCDIRS += $(FLIGHT)/Modules/RTT
 EXTRAINCDIRS += $(FLIGHT)/Modules/TestTask
 EXTRAINCDIRS += $(FLIGHT)/Modules/CANBridge
 EXTRAINCDIRS += $(FLIGHT)/Modules/PixCar
+EXTRAINCDIRS += $(FLIGHT)/Modules/CANTalk
+EXTRAINCDIRS += $(FLIGHT)/Modules/CANTalk/libcanard
 
 EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${OPTMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
 
@@ -228,7 +228,7 @@ CFLAGS += -O0
 CFLAGS += -DGENERAL_COV
 CFLAGS += -finstrument-functions -ffixed-r10
 else
-CFLAGS += -Os -fconserve-stack
+CFLAGS += -O0 -fconserve-stack
 endif
 
 

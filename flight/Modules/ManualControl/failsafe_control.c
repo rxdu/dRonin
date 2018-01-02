@@ -68,8 +68,8 @@ int32_t failsafe_control_select(bool reset_controller)
 
 	uint8_t driving_status;
 	DrivingStatusDrivingModeGet(&driving_status);
-	if (driving_status != DRIVINGSTATUS_DRIVINGMODE_FAILSAFE || reset_controller) {
-		driving_status = DRIVINGSTATUS_DRIVINGMODE_FAILSAFE;
+	if (driving_status != DRIVINGSTATUS_DRIVINGMODE_EMERGENCY|| reset_controller) {
+		driving_status = DRIVINGSTATUS_DRIVINGMODE_EMERGENCY;
 		DrivingStatusDrivingModeSet(&driving_status);
 	}
 

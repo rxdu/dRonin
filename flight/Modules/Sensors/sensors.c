@@ -62,10 +62,12 @@ extern pios_i2c_t external_i2c_adapter_id;
 #include "coordinate_conversions.h"
 #include "hallsensor.h"
 
+#include "jlink_rtt.h"
+
 // Private constants
 #define STACK_SIZE_BYTES 1000
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
-#define SENSOR_PERIOD 5		// this allows sensor data to arrive as slow as 166Hz->200Hz
+#define SENSOR_PERIOD 4		// this allows sensor data to arrive as slow as 166Hz->250Hz
 #define REQUIRED_GOOD_CYCLES 50
 #define MAX_TIME_BETWEEN_VALID_BARO_DATAS_MS 100*1000  // we allow a pause time of 100 ms between two valid
                                                        // temperature/barometer dataa
@@ -246,6 +248,14 @@ static void SensorsTask(void *parameters)
 	uint32_t last_baro_update_time = PIOS_DELAY_GetRaw();
 
 	while (1) {
+		// static uint32_t time_label = 0;
+		// uint32_t prev_time_label = time_label;
+		// time_label = PIOS_DELAY_GetuS();
+		// if(time_label > prev_time_label)
+		// 	JLinkRTTPrintf(0, "%ld\n", time_label - prev_time_label);
+		// else
+		// 	JLinkRTTPrintf(0, "%ld\n", 0xffffffff - prev_time_label + time_label);
+
 		if (good_runs == 0) {
 			PIOS_WDG_UpdateFlag(PIOS_WDG_SENSORS);
 			lastSysTime = PIOS_Thread_Systime();
@@ -526,6 +536,7 @@ static void update_baro(struct pios_sensor_baro_data *baro)
 static void update_hall(struct pios_sensor_hallsensor_data *hall)
 {
 	hallsensorData.count = hall->count;
+	hallsensorData.speed_estimate = PIXCAR_UpdateCarSpeed(hallsensorData.count);
 	HallSensorSet(&hallsensorData);
 }
 

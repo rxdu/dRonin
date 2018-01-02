@@ -137,7 +137,7 @@ void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const 
 	TIM_ICInit(ic_chan->timer, &TIM_ICInitStructure);
 
 	/* Enable the Capture Compare Interrupt Request */
-	TIM_ITConfig(ic_chan->timer, TIM_IT_Trigger, ENABLE);
+	TIM_ITConfig(ic_chan->timer, TIM_IT_Trigger | TIM_IT_Update, ENABLE);
 	// TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Trigger | TIM_IT_Update, ENABLE);	
 
 	TIM_Cmd(tim_cfg->timer, ENABLE);
@@ -399,84 +399,35 @@ static void PIOS_UAVCAN_TIM_irq_handler(TIM_TypeDef * timer)
 	
 	// JLinkRTTPrintf(0, "ARR: %ld\n", overflow_count);
 }
-
-// uint16_t PIOS_TIM_GetHallSensorReading()
-// {
-// 	return hall_sensor_reading;
-// }
  
 static struct pios_queue *hallsensor_queue;
 static struct pios_sensor_hallsensor_data hall_data;
 
 static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 {
-	// volatile static uint16_t hall_sensor_reading = 0;
-	
 	/* Check for a trigger event on this timer */
-	bool trg_event;
 	if (TIM_GetITStatus(timer, TIM_IT_Trigger) == SET) {
 		/* Read the current counter */
 		TIM_ClearITPendingBit(timer, TIM_IT_Trigger);		
-		trg_event = true;
-		// hall_sensor_reading = TIM_GetCapture1(timer);
 		hallsensor_queue = PIXCAR_GetHallSensorQueue();
 		hall_data.count = TIM_GetCapture1(timer);
 		PIOS_Queue_Send(hallsensor_queue, &hall_data, 0);
-	} else {
-		trg_event = false;
-		// hall_sensor_reading = 0;
-	}
+	} 
 
 	/* Check for an overflow event on this timer */
-	bool overflow_event;
 	uint16_t overflow_count;
 	if (TIM_GetITStatus(timer, TIM_IT_Update) == SET) {
 		TIM_ClearITPendingBit(timer, TIM_IT_Update);
 		overflow_count = timer->ARR;
-		overflow_event = true;
 		// set sensor reading as 0 if timer overflows
-		// hall_sensor_reading = 0;
 		hallsensor_queue = PIXCAR_GetHallSensorQueue();
 		hall_data.count = 0;
 		PIOS_Queue_Send(hallsensor_queue, &hall_data, 0);
 	} else {
 		overflow_count = 0;
-		overflow_event = false;
-	}
-		
-	/* Check for an edge count event on this timer */
-	bool edge_event;
-	uint16_t edge_count;
-	if (TIM_GetITStatus(timer, TIM_IT_CC1) == SET) {
-		TIM_ClearITPendingBit(timer, TIM_IT_CC1);
-		/* Read the current counter */
-		edge_count = TIM_GetCapture1(timer);
-		edge_event = true;
-	} else {
-		edge_event = false;
-		edge_count = 0;
 	}
 
-	(void)trg_event;
-	(void)overflow_event;
-	(void)edge_event;
 	(void)overflow_count;
-	// (void)hall_sensor_reading;
-	(void)edge_count;
-	// if(overflow_event)
-	// {
-	// 	JLinkRTTPrintf(0, "Timer 1 overflow ISR triggered\n", overflow_count);
-	// }
-
-	// if(edge_event)
-	// {	
-	// 	JLinkRTTPrintf(0, "Timer 1 edge ISR triggered, raw: %ld\n", edge_count);
-	// }
-
-	// if(trg_event)
-	// {		
-	// 	JLinkRTTPrintf(0, "Timer 1 trigger ISR triggered, hall sensor reading: %ld\n", hall_sensor_reading);
-	// }
 }
 
 

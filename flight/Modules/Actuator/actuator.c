@@ -399,7 +399,7 @@ static void actuator_task(void* parameters)
 				&maxpoweradd_bucket);
 
 		/* If we got this far, everything is OK. */
-		AlarmsClear(SYSTEMALARMS_ALARM_ACTUATOR);
+		// AlarmsClear(SYSTEMALARMS_ALARM_ACTUATOR);
 	}
 }
 
@@ -505,7 +505,7 @@ static void set_failsafe()
 	float Channel[CARACTUATORCOMMAND_CHANNEL_NUMELEM] = {0};
 
 	// Set alarm
-	AlarmsSet(SYSTEMALARMS_ALARM_ACTUATOR, SYSTEMALARMS_ALARM_CRITICAL);
+	// AlarmsSet(SYSTEMALARMS_ALARM_ACTUATOR, SYSTEMALARMS_ALARM_CRITICAL);
 
 	// Update servo outputs
 	for (int n = 0; n < MAX_MIX_ACTUATORS; ++n) {

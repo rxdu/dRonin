@@ -43,10 +43,11 @@
 //#define PIOS_INCLUDE_WS2811
 
 /* Select the sensors to include */
-#define PIOS_INCLUDE_MPU
+// #define PIOS_INCLUDE_MPU
 // #define PIOS_INCLUDE_MPU_MAG
-#define PIOS_INCLUDE_HMC5983
-#define PIOS_HMC5983_HAS_GPIOS
+// #define PIOS_INCLUDE_HMC5983
+// #define PIOS_HMC5983_HAS_GPIOS
+
 //#define PIOS_INCLUDE_MS5611
 
 //#define PIOS_INCLUDE_OPTICALFLOW
