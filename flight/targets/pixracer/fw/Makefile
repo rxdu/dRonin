@@ -38,7 +38,7 @@ DEBUG ?= NO
 # List of modules to include
 MODULES = RTT
 # MODULES = TestTask
-MODULES += Sensors
+# MODULES += Sensors
 #MODULES += Attitude 
 MODULES += Actuator
 MODULES += ManualControl

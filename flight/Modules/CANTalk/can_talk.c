@@ -104,23 +104,23 @@ MODULE_HIPRI_INITCALL(CANTalkInitialize, CANTalkStart);
  */
 static void canTalkTask(void *parameters)
 {
-	UAVObjEvent ev;
-	GyrosData gyrosData;
-	AccelsData accelsData;
-	MagnetometerData magData;
+	// UAVObjEvent ev;
+	// GyrosData gyrosData;
+	// AccelsData accelsData;
+	// MagnetometerData magData;
 	// HallSensorData hallData;
 
-	gyrosData.x = 0;
-	gyrosData.y = 0;
-	gyrosData.z = 0;
+	// gyrosData.x = 0;
+	// gyrosData.y = 0;
+	// gyrosData.z = 0;
 
-	accelsData.x = 0;
-	accelsData.y = 0;
-	accelsData.z = 9.8;
+	// accelsData.x = 0;
+	// accelsData.y = 0;
+	// accelsData.z = 9.8;
 
-	magData.x = 100;
-	magData.y = 0;
-	magData.z = 0;
+	// magData.x = 100;
+	// magData.y = 0;
+	// magData.z = 0;
 
 	// hallData.count = 0;
 
@@ -136,55 +136,47 @@ static void canTalkTask(void *parameters)
 		// else
 		// 	JLinkRTTPrintf(0, "%ld\n", 0xffffffff - prev_time_label + time_label);
 
-		uint32_t time_stamp = PIOS_Thread_Systime();
-
-		// bool gyroTimeout = PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) != true;
-		// bool accelTimeout = PIOS_Queue_Receive(accelQueue, &ev, 0) != true;
-
-		// if (gyroTimeout)
-		// 	JLinkRTTPrintf(0, "Gyro timeout\n", 0);
-		// if (accelTimeout)
-		// 	JLinkRTTPrintf(0, "Accel timeout\n", 0);
+		// uint32_t time_stamp = PIOS_Thread_Systime();
 
 		// Send IMU sensor data to CAN bus if updated
-		if (PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) && PIOS_Queue_Receive(accelQueue, &ev, 0))
-		{
-			struct CANIMURawData imu_raw;
+		// if (PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) && PIOS_Queue_Receive(accelQueue, &ev, 0))
+		// {
+		// 	struct CANIMURawData imu_raw;
 
-			GyrosGet(&gyrosData);
-			AccelsGet(&accelsData);
+		// 	GyrosGet(&gyrosData);
+		// 	AccelsGet(&accelsData);
 
-			imu_raw.time_stamp = time_stamp;
+		// 	imu_raw.time_stamp = time_stamp;
 
-			imu_raw.gyro.x = gyrosData.x;
-			imu_raw.gyro.y = gyrosData.y;
-			imu_raw.gyro.z = gyrosData.z;
+		// 	imu_raw.gyro.x = gyrosData.x;
+		// 	imu_raw.gyro.y = gyrosData.y;
+		// 	imu_raw.gyro.z = gyrosData.z;
 
-			imu_raw.accel.x = accelsData.x;
-			imu_raw.accel.y = accelsData.y;
-			imu_raw.accel.z = accelsData.z;
+		// 	imu_raw.accel.x = accelsData.x;
+		// 	imu_raw.accel.y = accelsData.y;
+		// 	imu_raw.accel.z = accelsData.z;
 
-		    (void)imu_raw;
-			// Pixcar_PublishIMUData(&imu_raw);
-		}
+		//     (void)imu_raw;
+		// 	// Pixcar_PublishIMUData(&imu_raw);
+		// }
 		// else
 		// 	JLinkRTTPrintf(0, "No IMU data: %ld\n", 0);
 
-		if (PIOS_Queue_Receive(magQueue, &ev, 0))
-		{
-			struct CANMagRawData mag_raw;
+		// if (PIOS_Queue_Receive(magQueue, &ev, 0))
+		// {
+		// 	struct CANMagRawData mag_raw;
 
-			MagnetometerGet(&magData);
+		// 	MagnetometerGet(&magData);
 
-			mag_raw.time_stamp = time_stamp;
+		// 	mag_raw.time_stamp = time_stamp;
 
-			mag_raw.mag.x = magData.x;
-			mag_raw.mag.y = magData.y;
-			mag_raw.mag.z = magData.z;
+		// 	mag_raw.mag.x = magData.x;
+		// 	mag_raw.mag.y = magData.y;
+		// 	mag_raw.mag.z = magData.z;
 
-			(void)mag_raw;
-			Pixcar_PublishMagData(&mag_raw);
-		}
+		// 	(void)mag_raw;
+		// 	// Pixcar_PublishMagData(&mag_raw);
+		// }
 		// else
 		// 	JLinkRTTPrintf(0, "No Mag data: %ld\n",0);
 

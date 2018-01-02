@@ -170,39 +170,39 @@ void PIOS_Board_Init(void)
 	/*							  Sensors								 */
 	/* ----------------------------------------------------------------- */
 	/* init sensor queue registration */
-	PIOS_SENSORS_Init();
+// 	PIOS_SENSORS_Init();
 
-	PIOS_WDG_Clear();
-	PIOS_DELAY_WaitmS(200);
-	PIOS_WDG_Clear();
+// 	PIOS_WDG_Clear();
+// 	PIOS_DELAY_WaitmS(200);
+// 	PIOS_WDG_Clear();
 
-#if defined(PIOS_INCLUDE_MPU)
-	pios_mpu_dev_t mpu_dev = NULL;
-	if (PIOS_MPU_SPI_Init(&mpu_dev, pios_spi_gyro_accel_mag_id, 0, &pios_mpu_cfg) != 0)
-		PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_IMU);
+// #if defined(PIOS_INCLUDE_MPU)
+// 	pios_mpu_dev_t mpu_dev = NULL;
+// 	if (PIOS_MPU_SPI_Init(&mpu_dev, pios_spi_gyro_accel_mag_id, 0, &pios_mpu_cfg) != 0)
+// 		PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_IMU);
 
-	// set the gyro range:
-	// PIOS_MPU_SCALE_250_DEG, PIOS_MPU_SCALE_500_DEG
-	// PIOS_MPU_SCALE_1000_DEG, PIOS_MPU_SCALE_2000_DEG
-	PIOS_MPU_SetGyroRange(PIOS_MPU_SCALE_1000_DEG);
+// 	// set the gyro range:
+// 	// PIOS_MPU_SCALE_250_DEG, PIOS_MPU_SCALE_500_DEG
+// 	// PIOS_MPU_SCALE_1000_DEG, PIOS_MPU_SCALE_2000_DEG
+// 	PIOS_MPU_SetGyroRange(PIOS_MPU_SCALE_1000_DEG);
 
-	// set the acc range:
-	// PIOS_MPU_SCALE_2G, PIOS_MPU_SCALE_4G
-	// PIOS_MPU_SCALE_8G, PIOS_MPU_SCALE_8G
-	PIOS_MPU_SetAccelRange(PIOS_MPU_SCALE_2G);
+// 	// set the acc range:
+// 	// PIOS_MPU_SCALE_2G, PIOS_MPU_SCALE_4G
+// 	// PIOS_MPU_SCALE_8G, PIOS_MPU_SCALE_8G
+// 	PIOS_MPU_SetAccelRange(PIOS_MPU_SCALE_2G);
 
-	// the filter has to be set before rate else divisor calculation will fail
-	// 188 , 98 , 42 , 20 , 10 , 5
-	uint16_t bandwidth = 188;
-	PIOS_MPU_SetGyroBandwidth(bandwidth);
-#endif
+// 	// the filter has to be set before rate else divisor calculation will fail
+// 	// 188 , 98 , 42 , 20 , 10 , 5
+// 	uint16_t bandwidth = 188;
+// 	PIOS_MPU_SetGyroBandwidth(bandwidth);
+// #endif
 
-#if defined(PIOS_INCLUDE_HMC5983)
-	if( PIOS_HMC5983_Init(pios_spi_gyro_accel_mag_id, 1, &pios_hmc5983_internal_cfg) != 0)
-		PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_MAG);
-	else
-		JLinkWriteString(0, "HMC5983 init successful\n");
-#endif
+// #if defined(PIOS_INCLUDE_HMC5983)
+// 	if( PIOS_HMC5983_Init(pios_spi_gyro_accel_mag_id, 1, &pios_hmc5983_internal_cfg) != 0)
+// 		PIOS_HAL_CriticalError(PIOS_LED_ALARM, PIOS_HAL_PANIC_MAG);
+// 	else
+// 		JLinkWriteString(0, "HMC5983 init successful\n");
+// #endif
 }
 
 /**

@@ -38,10 +38,6 @@ static void makeIMUDataMessage(struct CANIMURawData *imu_data, uint8_t buffer[UA
 {
     memset(buffer, 0, UAVCAN_PIXCAR_CARRAWIMU_MESSAGE_SIZE);
 	
-	/*
-     * Here we're using the helper for demonstrational purposes; in this simple case it could be preferred to
-     * encode the values manually.
-     */
 	canardEncodeScalar(buffer, 0, 32, &imu_data->time_stamp);
 	canardEncodeScalar(buffer, 32, 32, &imu_data->gyro.x);
     canardEncodeScalar(buffer, 64, 32, &imu_data->gyro.y);
@@ -54,11 +50,7 @@ static void makeIMUDataMessage(struct CANIMURawData *imu_data, uint8_t buffer[UA
 static void makeMagDataMessage(struct CANMagRawData *mag_data, uint8_t buffer[UAVCAN_PIXCAR_CARRAWMAG_MESSAGE_SIZE])
 {
     memset(buffer, 0, UAVCAN_PIXCAR_CARRAWMAG_MESSAGE_SIZE);
-	
-	/*
-     * Here we're using the helper for demonstrational purposes; in this simple case it could be preferred to
-     * encode the values manually.
-     */
+
 	canardEncodeScalar(buffer, 0, 32, &mag_data->time_stamp);
 	canardEncodeScalar(buffer, 32, 32, &mag_data->mag.x);
     canardEncodeScalar(buffer, 64, 32, &mag_data->mag.y);
@@ -85,7 +77,7 @@ void Pixcar_PublishMagData(struct CANMagRawData *mag_data)
 
     static uint8_t transfer_id;
     const int bc_res = PIOS_canardBroadcast(getCanardInstance(), UAVCAN_PIXCAR_CARRAWMAG_DATA_TYPE_SIGNATURE,
-                                            UAVCAN_PIXCAR_CARRAWMAG_DATA_TYPE_ID, &transfer_id, CANARD_TRANSFER_PRIORITY_HIGH,
+                                            UAVCAN_PIXCAR_CARRAWMAG_DATA_TYPE_ID, &transfer_id, CANARD_TRANSFER_PRIORITY_MEDIUM,
                                             buffer, UAVCAN_PIXCAR_CARRAWMAG_MESSAGE_SIZE);
     if (bc_res <= 0)
         JLinkRTTPrintf(0, "Could not broadcast mag data; error %d\n", bc_res);
