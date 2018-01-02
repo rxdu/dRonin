@@ -9,10 +9,11 @@
 
 #include "pios_canard.h"
 
+#include "pios.h"
 #include "pios_tim.h"
 #include "pios_can.h"
+#include "pixcar_can.h"
 
-#include "pixcar.h"
 #include "jlink_rtt.h"
 
 static CanardInstance canard;
@@ -42,28 +43,29 @@ void PIOS_canardReceive(uint32_t id, const uint8_t *data, uint8_t data_len)
     for (int i = 0; i < data_len; i++)
         rx_frame.data[i] = data[i];
 
+    chSysLockFromIsr();
     canardHandleRxFrame(&canard, &rx_frame, timestamp);
+    chSysUnlockFromIsr();
+}
+
+int PIOS_canardBroadcast(CanardInstance *ins,
+                    uint64_t data_type_signature,
+                    uint16_t data_type_id,
+                    uint8_t *inout_transfer_id,
+                    uint8_t priority,
+                    const void *payload,
+                    uint16_t payload_len)
+{
+    chSysLock();
+    int res = canardBroadcast(ins, data_type_signature, data_type_id, inout_transfer_id, priority, payload, payload_len);
+    chSysUnlock();
+    return res;
 }
 
 void onTransferReceived(CanardInstance *ins, CanardRxTransfer *transfer)
 {
-    JLinkRTTPrintf(0, "Received something\n", 0);
-
-    if ((transfer->source_node_id == UAVCAN_PIXCAR_SBC_NODE_ID) &&
-        (transfer->data_type_id == UAVCAN_PIXCAR_CARCOMMAND_DATA_TYPE_ID))
-    {
-        int8_t servo_cmd = 0;
-        int8_t motor_cmd = 0;
-        canardDecodeScalar(transfer, 0, 8, true, &servo_cmd);
-        canardDecodeScalar(transfer, 8, 8, true, &motor_cmd);
-
-        struct pios_can_cmd_data cmd;
-        cmd.steering = servo_cmd/100.0;
-        cmd.throttle = motor_cmd/100.0;
-        PIXCAR_SetNavigationDesired(&cmd);
-
-        JLinkRTTPrintf(0, "Received car_command, payload lenght %d, byte 1: %d , byte 2: %d\n", transfer->payload_len, servo_cmd, motor_cmd);
-    }
+    // JLinkRTTPrintf(0, "Received something\n", 0);
+    Pixcar_ReceiveCarCommand(transfer);    
 }
 
 bool shouldAcceptTransfer(const CanardInstance *ins,

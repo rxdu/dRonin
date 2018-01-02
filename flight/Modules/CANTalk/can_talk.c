@@ -13,6 +13,7 @@
 
 #include "canard.h"
 #include "pios_canard.h"
+#include "pixcar_can.h"
 
 // UAVOs
 #include "gyros.h"
@@ -51,7 +52,7 @@ static uint8_t node_mode = UAVCAN_NODE_MODE_INITIALIZATION;
 static void canTalkTask(void *parameters);
 static void updateCANNodeStatus(bool print_mem_stat);
 void makeNodeStatusMessage(uint8_t buffer[UAVCAN_NODE_STATUS_MESSAGE_SIZE]);
-void processTxRxOnce(int timeout_msec);
+void processTxRxOnce();
 
 /**
  * Module starting
@@ -103,23 +104,23 @@ MODULE_HIPRI_INITCALL(CANTalkInitialize, CANTalkStart);
  */
 static void canTalkTask(void *parameters)
 {
-	// UAVObjEvent ev;
-	// GyrosData gyrosData;
-	// AccelsData accelsData;
-	// MagnetometerData magData;
+	UAVObjEvent ev;
+	GyrosData gyrosData;
+	AccelsData accelsData;
+	MagnetometerData magData;
 	// HallSensorData hallData;
 
-	// gyrosData.x = 0;
-	// gyrosData.y = 0;
-	// gyrosData.z = 0;
+	gyrosData.x = 0;
+	gyrosData.y = 0;
+	gyrosData.z = 0;
 
-	// accelsData.x = 0;
-	// accelsData.y = 0;
-	// accelsData.z = 9.8;
+	accelsData.x = 0;
+	accelsData.y = 0;
+	accelsData.z = 9.8;
 
-	// magData.x = 100;
-	// magData.y = 0;
-	// magData.z = 0;
+	magData.x = 100;
+	magData.y = 0;
+	magData.z = 0;
 
 	// hallData.count = 0;
 
@@ -135,7 +136,7 @@ static void canTalkTask(void *parameters)
 		// else
 		// 	JLinkRTTPrintf(0, "%ld\n", 0xffffffff - prev_time_label + time_label);
 
-		// uint32_t time_stamp = PIOS_Thread_Systime();
+		uint32_t time_stamp = PIOS_Thread_Systime();
 
 		// bool gyroTimeout = PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) != true;
 		// bool accelTimeout = PIOS_Queue_Receive(accelQueue, &ev, 0) != true;
@@ -146,46 +147,46 @@ static void canTalkTask(void *parameters)
 		// 	JLinkRTTPrintf(0, "Accel timeout\n", 0);
 
 		// Send IMU sensor data to CAN bus if updated
-		// if (PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) && PIOS_Queue_Receive(accelQueue, &ev, 0))
-		// {
-		// 	struct CANIMURawData imu_raw;
+		if (PIOS_Queue_Receive(gyroQueue, &ev, GYRO_TIMEOUT_MS) && PIOS_Queue_Receive(accelQueue, &ev, 0))
+		{
+			struct CANIMURawData imu_raw;
 
-		// 	GyrosGet(&gyrosData);
-		// 	AccelsGet(&accelsData);
+			GyrosGet(&gyrosData);
+			AccelsGet(&accelsData);
 
-		// 	imu_raw.time_stamp = time_stamp;
+			imu_raw.time_stamp = time_stamp;
 
-		// 	imu_raw.gyro.x = gyrosData.x;
-		// 	imu_raw.gyro.y = gyrosData.y;
-		// 	imu_raw.gyro.z = gyrosData.z;
+			imu_raw.gyro.x = gyrosData.x;
+			imu_raw.gyro.y = gyrosData.y;
+			imu_raw.gyro.z = gyrosData.z;
 
-		// 	imu_raw.accel.x = accelsData.x;
-		// 	imu_raw.accel.y = accelsData.y;
-		// 	imu_raw.accel.z = accelsData.z;
+			imu_raw.accel.x = accelsData.x;
+			imu_raw.accel.y = accelsData.y;
+			imu_raw.accel.z = accelsData.z;
 
-		//     (void)imu_raw;
-		// 	// UAVCANNode_PublishIMUData(&imu_raw);
-		// }
+		    (void)imu_raw;
+			// Pixcar_PublishIMUData(&imu_raw);
+		}
 		// else
 		// 	JLinkRTTPrintf(0, "No IMU data: %ld\n", 0);
 
-		// if (PIOS_Queue_Receive(magQueue, &ev, 0))
-		// {
-		// 	struct CANMagRawData mag_raw;
+		if (PIOS_Queue_Receive(magQueue, &ev, 0))
+		{
+			struct CANMagRawData mag_raw;
 
-		// 	MagnetometerGet(&magData);
+			MagnetometerGet(&magData);
 
-		// 	mag_raw.time_stamp = time_stamp;
+			mag_raw.time_stamp = time_stamp;
 
-		// 	mag_raw.mag.x = magData.x;
-		// 	mag_raw.mag.y = magData.y;
-		// 	mag_raw.mag.z = magData.z;
+			mag_raw.mag.x = magData.x;
+			mag_raw.mag.y = magData.y;
+			mag_raw.mag.z = magData.z;
 
-		// 	(void)mag_raw;
-		// 	// UAVCANNode_PublishMagData(&mag_raw);
-		// }
-		// // else
-		// // 	JLinkRTTPrintf(0, "No Mag data: %ld\n",0);
+			(void)mag_raw;
+			Pixcar_PublishMagData(&mag_raw);
+		}
+		// else
+		// 	JLinkRTTPrintf(0, "No Mag data: %ld\n",0);
 
 		// if (PIOS_Queue_Receive(speedQueue, &ev, 0))
 		// {
@@ -211,7 +212,7 @@ static void canTalkTask(void *parameters)
 		// PIOS_DELAY_WaitmS(UPDATE_PERIOD_MS);
 		// UAVCANNode_SpinNode(UAVCAN_SPIN_TIMEOUT_MS);
 
-		processTxRxOnce(0);
+		processTxRxOnce();
 
 		if (loop_count++ % 200 == 0)
 			updateCANNodeStatus(false);
@@ -254,7 +255,7 @@ void updateCANNodeStatus(bool print_mem_stat)
 		makeNodeStatusMessage(buffer);
 
 		static uint8_t transfer_id;
-		const int bc_res = canardBroadcast(canard, UAVCAN_NODE_STATUS_DATA_TYPE_SIGNATURE,
+		const int bc_res = PIOS_canardBroadcast(canard, UAVCAN_NODE_STATUS_DATA_TYPE_SIGNATURE,
 										   UAVCAN_NODE_STATUS_DATA_TYPE_ID, &transfer_id, CANARD_TRANSFER_PRIORITY_LOW,
 										   buffer, UAVCAN_NODE_STATUS_MESSAGE_SIZE);
 		if (bc_res <= 0)
@@ -288,7 +289,7 @@ void makeNodeStatusMessage(uint8_t buffer[UAVCAN_NODE_STATUS_MESSAGE_SIZE])
 	canardEncodeScalar(buffer, 34, 3, &node_mode);
 }
 
-void processTxRxOnce(int timeout_msec)
+void processTxRxOnce()
 {
 	// Transmitting
 	for (const CanardCANFrame *txf = NULL; (txf = canardPeekTxQueue(canard)) != NULL;)
