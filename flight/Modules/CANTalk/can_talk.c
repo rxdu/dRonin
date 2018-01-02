@@ -243,9 +243,7 @@ void updateCANNodeStatus(bool print_mem_stat)
 	     * record the worst case memory usage.
 	     */
 	    if (peak_percent > 70)
-	    {
 	        JLinkRTTPrintf(0, "WARNING: ENLARGE MEMORY POOL", 0);
-	    }
 	}
 
 	/*
@@ -255,10 +253,7 @@ void updateCANNodeStatus(bool print_mem_stat)
 		uint8_t buffer[UAVCAN_NODE_STATUS_MESSAGE_SIZE];
 		makeNodeStatusMessage(buffer);
 
-		// JLinkRTTPrintf(0, "buffer: %d, %d, %d, %d, %d, %d, %d\n", buffer[0],buffer[1],buffer[2],buffer[3],buffer[4],buffer[5],buffer[6]);
-
 		static uint8_t transfer_id;
-
 		const int bc_res = canardBroadcast(canard, UAVCAN_NODE_STATUS_DATA_TYPE_SIGNATURE,
 										   UAVCAN_NODE_STATUS_DATA_TYPE_ID, &transfer_id, CANARD_TRANSFER_PRIORITY_LOW,
 										   buffer, UAVCAN_NODE_STATUS_MESSAGE_SIZE);
@@ -314,20 +309,5 @@ void processTxRxOnce(int timeout_msec)
 		}
 	}
 
-	// // Receiving
-	// CanardCANFrame rx_frame;
-	// const uint64_t timestamp = getMonotonicTimestampUSec();
-	// const int rx_res = socketcanReceive(socketcan, &rx_frame, timeout_msec);
-	// if (rx_res < 0)             // Failure - report
-	// {
-	//     (void)fprintf(stderr, "Receive error %d, errno '%s'\n", rx_res, strerror(errno));
-	// }
-	// else if (rx_res > 0)        // Success - process the frame
-	// {
-	//     canardHandleRxFrame(canard, &rx_frame, timestamp);
-	// }
-	// else
-	// {
-	//     ;                       // Timeout - nothing to do
-	// }
+	// Receiving handled from CAN RX IRQ
 }

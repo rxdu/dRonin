@@ -12,6 +12,9 @@
 
 #include "canard.h"
 
+// Pixcar Node run on SBC
+#define UAVCAN_PIXCAR_SBC_NODE_ID 2
+
 /*
  * Some useful constants defined by the UAVCAN specification.
  * Data type signature values can be easily obtained with the script show_data_type_info.py
@@ -38,6 +41,11 @@
 #define UAVCAN_GET_NODE_INFO_DATA_TYPE_ID                           1
 
 #define UNIQUE_ID_LENGTH_BYTES                                      16
+
+/*
+ * User defined message types
+ */
+ #define UAVCAN_PIXCAR_CARCOMMAND_DATA_TYPE_ID                      25001
 
 uint64_t getMonotonicTimestampUSec(void);
 

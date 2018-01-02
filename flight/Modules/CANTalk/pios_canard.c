@@ -12,6 +12,7 @@
 #include "pios_tim.h"
 #include "pios_can.h"
 
+#include "pixcar.h"
 #include "jlink_rtt.h"
 
 static CanardInstance canard;
@@ -38,15 +39,31 @@ void PIOS_canardReceive(uint32_t id, const uint8_t *data, uint8_t data_len)
     CanardCANFrame rx_frame;
     rx_frame.id = id;
     rx_frame.data_len = data_len;
-    for(int i = 0; i < data_len; i++)
-        rx_frame.data[i] = data[i]; 
-        
-	canardHandleRxFrame(&canard, &rx_frame, timestamp);
+    for (int i = 0; i < data_len; i++)
+        rx_frame.data[i] = data[i];
+
+    canardHandleRxFrame(&canard, &rx_frame, timestamp);
 }
 
 void onTransferReceived(CanardInstance *ins, CanardRxTransfer *transfer)
 {
-    JLinkRTTPrintf(0, "Received something\n",0);
+    JLinkRTTPrintf(0, "Received something\n", 0);
+
+    if ((transfer->source_node_id == UAVCAN_PIXCAR_SBC_NODE_ID) &&
+        (transfer->data_type_id == UAVCAN_PIXCAR_CARCOMMAND_DATA_TYPE_ID))
+    {
+        int8_t servo_cmd = 0;
+        int8_t motor_cmd = 0;
+        canardDecodeScalar(transfer, 0, 8, true, &servo_cmd);
+        canardDecodeScalar(transfer, 8, 8, true, &motor_cmd);
+
+        struct pios_can_cmd_data cmd;
+        cmd.steering = servo_cmd/100.0;
+        cmd.throttle = motor_cmd/100.0;
+        PIXCAR_SetNavigationDesired(&cmd);
+
+        JLinkRTTPrintf(0, "Received car_command, payload lenght %d, byte 1: %d , byte 2: %d\n", transfer->payload_len, servo_cmd, motor_cmd);
+    }
 }
 
 bool shouldAcceptTransfer(const CanardInstance *ins,
@@ -55,9 +72,16 @@ bool shouldAcceptTransfer(const CanardInstance *ins,
                           CanardTransferType transfer_type,
                           uint8_t source_node_id)
 {
-    (void)source_node_id;
-    if(source_node_id == 2)
-        return true;
+    // (void)source_node_id;
+    if (source_node_id == UAVCAN_PIXCAR_SBC_NODE_ID)
+    {
+        // ignore node status type
+        if ((transfer_type == CanardTransferTypeBroadcast) &&
+            (data_type_id == UAVCAN_NODE_STATUS_DATA_TYPE_ID))
+            return false;
+        else
+            return true;
+    }
 
     if (canardGetLocalNodeID(ins) == CANARD_BROADCAST_NODE_ID)
     {
