@@ -147,7 +147,7 @@ void PIOS_Board_Init(void)
 	else
 		JLinkWriteString(0, "CAN init successful\n");
 
-#ifndef PIOS_INCLUDE_UAVCAN 
+#ifndef PIOS_INCLUDE_CANTALK
 	if (PIOS_COM_Init(&pios_com_can_id, &pios_can_com_driver, pios_can_id,
 					  PIOS_COM_CAN_RX_BUF_LEN,
 					  PIOS_COM_CAN_TX_BUF_LEN))

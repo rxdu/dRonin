@@ -40,7 +40,7 @@
 #include "pios_can_priv.h"
 
 #ifdef PIOS_INCLUDE_CANTALK
-#include "pixcar_can.h"
+#include "can_talk.h"
 #endif
 #include "jlink_rtt.h"
 
@@ -399,7 +399,7 @@ static void PIOS_CAN_RxGeneric(void)
 		uavcan_id = RxMessage.StdId;
 	else
 		uavcan_id = RxMessage.ExtId;
-	Pixcar_CanTalkReceive(uavcan_id, RxMessage.Data, RxMessage.DLC);
+	AutoCarReceiveCANMessage(uavcan_id, RxMessage.Data, RxMessage.DLC);
 #else
 	bool rx_need_yield = false;
 	if (RxMessage.StdId == CAN_COM_ID) {

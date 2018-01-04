@@ -54,7 +54,7 @@
 #include "carnavigationdesired.h"
 
 #include "misc_math.h"
-#include "pixcar.h"
+#include "auto_car.h"
 
 #include "jlink_rtt.h"
 
@@ -466,14 +466,14 @@ int32_t transmitter_control_select(bool reset_controller)
 
 	switch(drivingMode) {
 	case DRIVINGSTATUS_DRIVINGMODE_MANUAL:
-		PIXCAR_ResetNavigationDesired();
+		AutoCarResetNavigationDesired();
 		update_manual_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
 		update_navigation_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_EMERGENCY:
-		PIXCAR_ResetNavigationDesired();
+		AutoCarResetNavigationDesired();
 		update_emergency_desired(&cmd);
 		break;
 	default:
@@ -901,7 +901,7 @@ static void update_manual_desired(CarManualControlCommandData * cmd)
 //! In navigation mode, set navigation desired
 static void update_navigation_desired(CarManualControlCommandData * cmd)
 {
-	PIXCAR_GetNavigationDesired(&cmd_from_can);
+	AutoCarGetNavigationDesired(&cmd_from_can);
 
 	CarActuatorDesiredData actuator;
 	CarActuatorDesiredGet(&actuator);

@@ -1,5 +1,5 @@
 /* 
- * pixcar.h
+ * auto_car.h
  * 
  * Created on: Nov 04, 2017 21:09
  * Description: 
@@ -7,8 +7,8 @@
  * Copyright (c) 2017 Ruixiang Du (rdu)
  */ 
 
-#ifndef PIXCAR_H
-#define PIXCAR_H
+#ifndef AUTO_CAR_H
+#define AUTO_CAR_H
 
 #include "pios.h"
 #include "stdint.h"
@@ -28,13 +28,13 @@ struct pios_can_cmd_data {
 };
 
 // Hall sensor data is updated from timer IRQ handler using queue
-struct pios_queue *PIXCAR_GetHallSensorQueue(void);
-float PIXCAR_UpdateCarSpeed(uint16_t hall_count);
+struct pios_queue *AutoCarGetHallSensorQueue(void);
+float AutoCarUpdateCarSpeed(uint16_t hall_count);
 
 // The set and reset functions are called by the CAN node or transmitter control node
-void PIXCAR_ResetNavigationDesired();
-void PIXCAR_SetNavigationDesired(struct pios_can_cmd_data * cmd);
+void AutoCarResetNavigationDesired();
+void AutoCarSetNavigationDesired(struct pios_can_cmd_data * cmd);
 // This function is used the get latest command from CAN bus
-void PIXCAR_GetNavigationDesired(struct pios_can_cmd_data * cmd);
+void AutoCarGetNavigationDesired(struct pios_can_cmd_data * cmd);
 
-#endif /* PIXCAR_H */
+#endif /* AUTO_CAR_H */

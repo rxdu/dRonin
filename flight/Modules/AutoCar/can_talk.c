@@ -1,5 +1,5 @@
 /* 
- * pixcar_can.c
+ * can_talk.c
  * 
  * Created on: Jan 01, 2018 23:35
  * Description: 
@@ -7,11 +7,11 @@
  * Copyright (c) 2017 Ruixiang Du (rdu)
  */
 
-#include "pixcar_can.h"
+#include "can_talk.h"
 #include "jlink_rtt.h"
-#include "pixcar.h"
+#include "auto_car.h"
 
-void Pixcar_PublishSpeedData(struct CANSpeedRawData *spd_data)
+void AutoCarPublishSpeedData(struct CANSpeedRawData *spd_data)
 {
     // make can message binary compatible with uavcan
     uint8_t can_frame[8];
@@ -22,10 +22,10 @@ void Pixcar_PublishSpeedData(struct CANSpeedRawData *spd_data)
     can_frame[3] = 0x000000ff & ((uint32_t)spd_data->time_stamp >> 24);
     can_frame[4] = dummy_byte++;
 
-    PIOS_CAN_TxCANFrame(CANTALK_PIXCAR_CARSPEED_DATA_TYPE_ID, true, can_frame, 5);
+    PIOS_CAN_TxCANFrame(CANTALK_AUTOCAR_CARSPEED_DATA_TYPE_ID, true, can_frame, 5);
 }
 
-void Pixcar_CanTalkReceive(uint32_t id, const uint8_t *data, uint8_t data_len)
+void AutoCarReceiveCANMessage(uint32_t id, const uint8_t *data, uint8_t data_len)
 {
     int8_t servo_cmd = 0;
     int8_t motor_cmd = 0;
@@ -33,16 +33,16 @@ void Pixcar_CanTalkReceive(uint32_t id, const uint8_t *data, uint8_t data_len)
 
     switch(id)
     {
-        case CANTALK_PIXCAR_CARCOMMAND_DATA_TYPE_ID:            
+        case CANTALK_AUTOCAR_CARCOMMAND_DATA_TYPE_ID:            
             servo_cmd = (int8_t)data[0];
             motor_cmd = (int8_t)data[1];           
             cmd.steering = servo_cmd / 100.0;
             cmd.throttle = motor_cmd / 100.0;
-            PIXCAR_SetNavigationDesired(&cmd);
+            AutoCarSetNavigationDesired(&cmd);
 
             JLinkRTTPrintf(0, "Received car_command, payload lenght %d, byte 1: %d , byte 2: %d\n", data_len, servo_cmd, motor_cmd);
             break;
-        case CANTALK_PIXCAR_SBCHEARTBEAT_DATA_TYPE_ID:
+        case CANTALK_AUTOCAR_SBCHEARTBEAT_DATA_TYPE_ID:
             JLinkRTTPrintf(0, "Received heatbeat from single-board computer\n", 0);
             break;
         default:

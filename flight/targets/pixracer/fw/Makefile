@@ -35,16 +35,16 @@ DEBUG ?= NO
 
 # List of modules to include
 MODULES = RTT
-# MODULES = TestTask
-# MODULES += Sensors
-#MODULES += Attitude 
-MODULES += Actuator
+MODULES += AutoCar
 MODULES += ManualControl
-MODULES += PixCar
+MODULES += Actuator
+# MODULES += Sensors
+# MODULES += Attitude 
+# MODULES = TestTask
+
 #MODULES += Stabilization
 #MODULES += FirmwareIAP
 #MODULES += Telemetry
-MODULES += CANTalk
 
 # OPTMODULES += GPS
 # OPTMODULES += AltitudeHold 
@@ -194,10 +194,7 @@ EXTRAINCDIRS  += $(DEBUG_CM3_DIR_INC)
 EXTRAINCDIRS  += $(MAVLINKINC)
 EXTRAINCDIRS += $(FLIGHT)/Modules/RTT
 EXTRAINCDIRS += $(FLIGHT)/Modules/TestTask
-EXTRAINCDIRS += $(FLIGHT)/Modules/CANBridge
-EXTRAINCDIRS += $(FLIGHT)/Modules/PixCar
-EXTRAINCDIRS += $(FLIGHT)/Modules/CANTalk
-EXTRAINCDIRS += $(FLIGHT)/Modules/CANTalk/libcanard
+EXTRAINCDIRS += $(FLIGHT)/Modules/AutoCar
 
 EXTRAINCDIRS += ${foreach MOD, ${MODULES} ${OPTMODULES}, $(OPMODULEDIR)/${MOD}/inc} ${OPMODULEDIR}/System/inc
 

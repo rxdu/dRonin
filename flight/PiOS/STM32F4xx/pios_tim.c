@@ -35,7 +35,7 @@
 #include "pios_tim.h"
 #include "pios_tim_priv.h"
 
-#include "pixcar.h"
+#include "auto_car.h"
 #include "jlink_rtt.h"
 
 volatile static uint64_t time_mono = 0;
@@ -375,7 +375,7 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 	if (TIM_GetITStatus(timer, TIM_IT_Trigger) == SET) {
 		/* Read the current counter */
 		TIM_ClearITPendingBit(timer, TIM_IT_Trigger);		
-		hallsensor_queue = PIXCAR_GetHallSensorQueue();
+		hallsensor_queue = AutoCarGetHallSensorQueue();
 		hall_data.count = TIM_GetCapture1(timer);
 		PIOS_Queue_Send(hallsensor_queue, &hall_data, 0);
 	} 
@@ -385,7 +385,7 @@ static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 		TIM_ClearITPendingBit(timer, TIM_IT_Update);
 		// uint16_t overflow_count = timer->ARR;
 		// set sensor reading as 0 if timer overflows
-		hallsensor_queue = PIXCAR_GetHallSensorQueue();
+		hallsensor_queue = AutoCarGetHallSensorQueue();
 		hall_data.count = 0;
 		PIOS_Queue_Send(hallsensor_queue, &hall_data, 0);
 	} 

@@ -100,8 +100,7 @@ int32_t ManualControlStart()
  */
 int32_t ManualControlInitialize()
 {
-	if (transmitter_control_initialize() == -1 \
-		|| CarNavigationDesiredInitialize() == -1) {
+	if (transmitter_control_initialize() == -1) {
 	
 		return -1;
 	}

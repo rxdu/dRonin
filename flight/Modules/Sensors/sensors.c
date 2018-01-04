@@ -37,8 +37,6 @@
 #include "misc_math.h"
 #include "lpfilter.h"
 
-#include "pixcar.h"
-
 #if defined(PIOS_INCLUDE_PX4FLOW)
 #include "pios_px4flow_priv.h"
 extern pios_i2c_t external_i2c_adapter_id;
@@ -60,7 +58,6 @@ extern pios_i2c_t external_i2c_adapter_id;
 #include "magnetometer.h"
 #include "magbias.h"
 #include "coordinate_conversions.h"
-#include "hallsensor.h"
 
 #include "jlink_rtt.h"
 
@@ -86,7 +83,6 @@ static void update_accels(struct pios_sensor_accel_data *accel);
 static void update_gyros(struct pios_sensor_gyro_data *gyro);
 static void update_mags(struct pios_sensor_mag_data *mag);
 static void update_baro(struct pios_sensor_baro_data *baro);
-static void update_hall(struct pios_sensor_hallsensor_data *hall);
 
 #if defined (PIOS_INCLUDE_OPTICALFLOW)
 static void update_optical_flow(struct pios_sensor_optical_flow_data *optical_flow);
@@ -105,7 +101,6 @@ static void updateTemperatureComp(float temperature, float *temp_bias);
 static struct pios_thread *sensorsTaskHandle;
 static INSSettingsData insSettings;
 static AccelsData accelsData;
-static HallSensorData hallsensorData;
 
 // These values are initialized by settings but can be updated by the attitude algorithm
 static bool bias_correct_gyro = true;
@@ -155,8 +150,7 @@ int32_t SensorsInitialize(void)
 		|| MagBiasInitialize() == -1 \
 		|| AttitudeSettingsInitialize() == -1 \
 		|| SensorSettingsInitialize() == -1 \
-		|| INSSettingsInitialize() == -1 \
-		|| HallSensorInitialize() == -1) {
+		|| INSSettingsInitialize() == -1) {
 
 		return -1;
 	}
@@ -267,7 +261,6 @@ static void SensorsTask(void *parameters)
 		struct pios_sensor_accel_data accels;
 		struct pios_sensor_mag_data mags;
 		struct pios_sensor_baro_data baro;
-		struct pios_sensor_hallsensor_data hall;
 
 		uint32_t timeval = PIOS_DELAY_GetRaw();
 
@@ -334,11 +327,6 @@ static void SensorsTask(void *parameters)
 						missing_sensor_severity);
 			}
 #endif
-		}
-
-		queue = PIXCAR_GetHallSensorQueue();
-		if (PIOS_Queue_Receive(queue, &hall, 0) != false) {			
-			update_hall(&hall);
 		}
 
 #if defined(PIOS_INCLUDE_OPTICALFLOW)
@@ -527,17 +515,6 @@ static void update_baro(struct pios_sensor_baro_data *baro)
 	baroAltitude.Pressure = baro->pressure;
 	baroAltitude.Altitude = baro->altitude;
 	BaroAltitudeSet(&baroAltitude);
-}
-
-/**
- * Update the hall sensor uavo from the data from the hall sensor queue
- * @param [in] baro raw hall sensor data
- */
-static void update_hall(struct pios_sensor_hallsensor_data *hall)
-{
-	hallsensorData.count = hall->count;
-	hallsensorData.speed_estimate = PIXCAR_UpdateCarSpeed(hallsensorData.count);
-	HallSensorSet(&hallsensorData);
 }
 
 /*
