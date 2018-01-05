@@ -893,7 +893,7 @@ static void update_manual_desired(CarManualControlCommandData * cmd)
 	actuator.Steering = cmd->Roll;
 	actuator.Throttle = cmd->Pitch;
 
-	JLinkRTTPrintf(0, "Updating manual desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
+	// JLinkRTTPrintf(0, "Updating manual desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
 
 	CarActuatorDesiredSet(&actuator);
 }
@@ -911,8 +911,8 @@ static void update_navigation_desired(CarManualControlCommandData * cmd)
 	actuator.Steering = cmd_from_can.steering;
 	actuator.Throttle = cmd_from_can.throttle;
 
-	if(actuator.Steering != 0 && actuator.Throttle != 0)
-		JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
+	// if(actuator.Steering != 0 && actuator.Throttle != 0)
+	// 	JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
 
 	CarActuatorDesiredSet(&actuator);
 }

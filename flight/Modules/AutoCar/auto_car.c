@@ -5,7 +5,7 @@
  * Description: 
  * 
  * Copyright (c) 2017 Ruixiang Du (rdu)
- */ 
+ */
 
 #include "openpilot.h"
 #include "pios_thread.h"
@@ -35,8 +35,8 @@ extern uintptr_t pios_can_id;
 
 #define CAN_RX_TIMEOUT_MS 10
 
-#define HALL_SENSOR_QUEUE_SIZE 1
-#define CAN_CMD_QUEUE_SIZE 1 
+#define HALL_SENSOR_QUEUE_SIZE 2
+#define CAN_CMD_QUEUE_SIZE 2
 
 // Private variables
 static uint32_t idleCounter;
@@ -44,11 +44,11 @@ static uint32_t idleCounterClear;
 
 static struct pios_can_cmd_data prev_can_cmd_data;
 
-static HallSensorData hallsensorData;
-static struct pios_sensor_hallsensor_data hallsensor_data;
+// static HallSensorData hallsensorData;
+// static struct pios_sensor_hallsensor_data hallsensor_data;
 
 // sensor queues
-static struct pios_queue *speedQueue;
+// static struct pios_queue *speedQueue;
 
 static struct pios_queue *hallsensor_queue;
 static struct pios_queue *navigation_desired_queue;
@@ -57,16 +57,13 @@ static struct pios_thread *taskHandle;
 
 // Private functions
 static void autoCarTask(void *parameters);
-static void update_hallsensor_data(struct pios_sensor_hallsensor_data *hall);
+// static void update_hallsensor_data(struct pios_sensor_hallsensor_data *hall);
 
 /**
  * Module starting
  */
 int32_t AutoCarTaskStart()
 {
-	/* Delay system */
-	PIOS_DELAY_Init();
-
 	// Watchdog must be registered before starting task
 	//PIOS_WDG_RegisterFlag(PIOS_WDG_MANUAL);
 
@@ -82,21 +79,18 @@ int32_t AutoCarTaskStart()
  */
 int32_t AutoCarTaskInitialize()
 {
-	if(HallSensorInitialize() == -1 \
-		|| CarNavigationDesiredInitialize() == -1)
+	if (HallSensorInitialize() == -1 || CarNavigationDesiredInitialize() == -1)
 		return -1;
 
-	prev_can_cmd_data.steering = 0.0;
-	prev_can_cmd_data.throttle = 0.0;		
-
-	// Create the queues
+	// Create queues
 	navigation_desired_queue = PIOS_Queue_Create(CAN_CMD_QUEUE_SIZE, sizeof(UAVObjEvent));
 	CarNavigationDesiredConnectQueue(navigation_desired_queue);
 
-	hallsensor_queue = PIOS_Queue_Create(HALL_SENSOR_QUEUE_SIZE, sizeof(struct pios_sensor_hallsensor_data));
+	hallsensor_queue = PIOS_Queue_Create(HALL_SENSOR_QUEUE_SIZE, sizeof(UAVObjEvent));
+	HallSensorConnectQueue(hallsensor_queue);
 
-	speedQueue = PIOS_Queue_Create(1, sizeof(UAVObjEvent));
-	HallSensorConnectQueue(speedQueue);
+	prev_can_cmd_data.steering = 0.0;
+	prev_can_cmd_data.throttle = 0.0;
 
 	return 0;
 }
@@ -114,6 +108,7 @@ static void autoCarTask(void *parameters)
 	hallData.count = 0;
 
 	uint32_t sys_time = PIOS_Thread_Systime();
+	uint32_t last_update_time = sys_time;
 	// static uint32_t loop_count = 0;
 
 	while (1)
@@ -126,39 +121,33 @@ static void autoCarTask(void *parameters)
 		// else
 		// 	JLinkRTTPrintf(0, "%ld\n", 0xffffffff - prev_time_label + time_label);
 
-		uint32_t time_stamp = PIOS_Thread_Systime();
+		// get current system time
+		sys_time = PIOS_Thread_Systime();
 
-		if (PIOS_Queue_Receive(hallsensor_queue, &hallsensor_data, 0) != false) 
-		{			
-			update_hallsensor_data(&hallsensor_data);
-		}
-		
-		if (PIOS_Queue_Receive(speedQueue, &ev, 0))
+		if (PIOS_Queue_Receive(hallsensor_queue, &ev, 0) != false)
 		{
+			last_update_time = sys_time;
+
 			struct CANSpeedRawData spd_raw;
 
 			HallSensorGet(&hallData);
 
 			// Send latest speed measurement
-			// float speed = calcCarSpeed();
-			spd_raw.time_stamp = time_stamp;
-			spd_raw.hallsensor_count = hallData.count;
-			spd_raw.speed_estimate = hallData.speed_estimate;
+			spd_raw.time_stamp = sys_time;
+			// spd_raw.hallsensor_count = hallData.count;
+			spd_raw.speed_estimate = hallData.speed;
 
 			(void)spd_raw;
-			// UAVCANNode_PublishSpeedData(&spd_raw);
 			// AutoCarPublishSpeedData(&spd_raw);
 
-			// JLinkRTTPrintf(0, "Speed: %ld\n", spd_raw.speed);
+			JLinkRTTPrintf(0, "Raw: %d , Speed: %ld\n", hallData.count, (int32_t)(hallData.speed * 100));
 		}
-
-		// struct CANSpeedRawData spd_raw;
-		// spd_raw.time_stamp = time_stamp;
-		// spd_raw.hallsensor_count = 0;//hallData.count;
-		// spd_raw.speed_estimate = 25;//hallData.speed_estimate;
-		// AutoCarPublishSpeedData(&spd_raw);
-		// else
-		// 	JLinkRTTPrintf(0, "No speed data: %ld\n",0);
+		else
+		{
+			uint32_t out_dated = sys_time - last_update_time;
+			// the car is running at very low speed, smaller than 0.07892467125 m/s
+			JLinkRTTPrintf(0, "No speed data for: %d ms\n", out_dated);
+		}
 
 		// if (loop_count++ % 200 == 0)
 		// 	updateCANNodeStatus(false);
@@ -169,26 +158,39 @@ static void autoCarTask(void *parameters)
 
 struct pios_queue *AutoCarGetHallSensorQueue(void)
 {
-	if(hallsensor_queue == NULL)
+	if (hallsensor_queue == NULL)
 		hallsensor_queue = PIOS_Queue_Create(HALL_SENSOR_QUEUE_SIZE, sizeof(struct pios_sensor_hallsensor_data));
 
 	return hallsensor_queue;
 }
 
-/**
- * Update the hall sensor uavo from the data from the hall sensor queue
- * @param [in] baro raw hall sensor data
- */
-static void update_hallsensor_data(struct pios_sensor_hallsensor_data *hall)
+void AutoCarUpdateHallsensorData(uint16_t hall_count)
 {
-	hallsensorData.count = hall->count;
-	hallsensorData.speed_estimate = AutoCarUpdateCarSpeed(hallsensorData.count);
+	static bool first_call = true;
+	if (first_call)
+	{
+		HallSensorInitialize();
+		first_call = false;
+	}
+
+	HallSensorData hallsensorData;
+	HallSensorGet(&hallsensorData);
+
+	hallsensorData.count = hall_count;
+	hallsensorData.speed = AutoCarUpdateCarSpeed(hallsensorData.count);
+
+	// JLinkRTTPrintf(0, "Raw: %d , Speed: %ld\n", hallsensorData.count, (int32_t)(hallsensorData.speed*100));
+
 	HallSensorSet(&hallsensorData);
 }
 
 float AutoCarUpdateCarSpeed(uint16_t hall_count)
 {
-	float latest_speed = 1.0e6/(hall_count * 6.0)/GEAR_RATIO*(M_PI*WHEEL_DIAMETER);
+	// 1.0e6 units = 1 second
+	// hall_count = number of time units between two pulses
+	// 1.0e6/(hall_count * TRIGGERS_PER_ROUND) = rounds per second (RPS)
+	// RPS * (M_PI * WHEEL_DIAMETER) = m/s
+	float latest_speed = 1.0e6 / (hall_count * TRIGGERS_PER_ROUND) * (M_PI * WHEEL_DIAMETER) / GEAR_RATIO;
 	float speed_est = latest_speed;
 
 	return speed_est;
@@ -205,7 +207,7 @@ void AutoCarResetNavigationDesired()
 	CarNavigationDesiredSet(&nav_desired);
 }
 
-void AutoCarSetNavigationDesired(struct pios_can_cmd_data * cmd)
+void AutoCarSetNavigationDesired(struct pios_can_cmd_data *cmd)
 {
 	CarNavigationDesiredData nav_desired;
 	CarNavigationDesiredGet(&nav_desired);
@@ -218,16 +220,16 @@ void AutoCarSetNavigationDesired(struct pios_can_cmd_data * cmd)
 	// JLinkRTTPrintf(0, "Set navigation desired from CAN: %d, %d\n",(int32_t)(nav_desired.Steering*100), (int32_t)(nav_desired.Throttle*100));
 }
 
-void AutoCarGetNavigationDesired(struct pios_can_cmd_data * cmd)
+void AutoCarGetNavigationDesired(struct pios_can_cmd_data *cmd)
 {
 	UAVObjEvent ev;
-	if(PIOS_Queue_Receive(navigation_desired_queue, &ev, 0))
-	{			 		
+	if (PIOS_Queue_Receive(navigation_desired_queue, &ev, 0))
+	{
 		CarNavigationDesiredData nav_desired;
 		CarNavigationDesiredGet(&nav_desired);
 
 		prev_can_cmd_data.steering = nav_desired.Steering;
-		prev_can_cmd_data.throttle = nav_desired.Throttle;		
+		prev_can_cmd_data.throttle = nav_desired.Throttle;
 	}
 
 	// update CAN cmd if there exists a new one in queue
@@ -242,9 +244,12 @@ void AutoCarGetNavigationDesired(struct pios_can_cmd_data * cmd)
 void vApplicationIdleHook(void)
 {
 	// Called when the scheduler has no tasks to run
-	if (idleCounterClear == 0) {
+	if (idleCounterClear == 0)
+	{
 		++idleCounter;
-	} else {
+	}
+	else
+	{
 		idleCounter = 0;
 		idleCounterClear = 0;
 	}

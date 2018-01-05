@@ -80,6 +80,7 @@
         "pios_hmc5983.h": "c",
         "carnavigationdesired.h": "c",
         "pios_canard.h": "c",
-        "pios_queue.h": "c"
+        "pios_queue.h": "c",
+        "geometry": "c"
     }
 }

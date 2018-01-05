@@ -137,7 +137,8 @@ void PIOS_TIM_InitHallSensorIF(const struct pios_tim_clock_cfg * tim_cfg, const 
 	TIM_ICInit(ic_chan->timer, &TIM_ICInitStructure);
 
 	/* Enable the Capture Compare Interrupt Request */
-	TIM_ITConfig(ic_chan->timer, TIM_IT_Trigger | TIM_IT_Update, ENABLE);
+	TIM_ITConfig(ic_chan->timer, TIM_IT_Trigger, ENABLE);
+	// TIM_ITConfig(ic_chan->timer, TIM_IT_Trigger | TIM_IT_Update, ENABLE);
 	// TIM_ITConfig(ic_chan->timer, TIM_IT_CC1 | TIM_IT_Trigger | TIM_IT_Update, ENABLE);	
 
 	TIM_Cmd(tim_cfg->timer, ENABLE);
@@ -366,29 +367,23 @@ static void PIOS_TIM_generic_irq_handler(TIM_TypeDef * timer)
 	}
 }
 
-static struct pios_queue *hallsensor_queue;
-static struct pios_sensor_hallsensor_data hall_data;
-
 static void PIOS_HALLSENSOR_TIM_irq_handler(TIM_TypeDef * timer)
 {
 	/* Check for a trigger event on this timer */
 	if (TIM_GetITStatus(timer, TIM_IT_Trigger) == SET) {
 		/* Read the current counter */
 		TIM_ClearITPendingBit(timer, TIM_IT_Trigger);		
-		hallsensor_queue = AutoCarGetHallSensorQueue();
-		hall_data.count = TIM_GetCapture1(timer);
-		PIOS_Queue_Send(hallsensor_queue, &hall_data, 0);
+		AutoCarUpdateHallsensorData(TIM_GetCapture1(timer));
+		// JLinkRTTPrintf(0, "TIM_IT_Trigger\n", 0);
 	} 
-
 	/* Check for an overflow event on this timer */
-	if (TIM_GetITStatus(timer, TIM_IT_Update) == SET) {
-		TIM_ClearITPendingBit(timer, TIM_IT_Update);
-		// uint16_t overflow_count = timer->ARR;
-		// set sensor reading as 0 if timer overflows
-		hallsensor_queue = AutoCarGetHallSensorQueue();
-		hall_data.count = 0;
-		PIOS_Queue_Send(hallsensor_queue, &hall_data, 0);
-	} 
+	// else if (TIM_GetITStatus(timer, TIM_IT_Update) == SET) {
+	// 	TIM_ClearITPendingBit(timer, TIM_IT_Update);
+	// 	// uint16_t overflow_count = timer->ARR;
+	// 	// set sensor reading as 0 if timer overflows
+	// 	AutoCarUpdateHallsensorData(0);
+	// 	JLinkRTTPrintf(0, "TIM_IT_Update\n", 0);
+	// } 
 }
 
 /* Bind Interrupt Handlers

@@ -990,8 +990,8 @@ static const struct pios_tim_clock_cfg tim_5_cfg = {
 	2: TIM1_CH3 (PE13) - Hall sensor interface input 3	
 	3: TIM1_CH2 (PE11) - Hall sensor interface input 2	
 	4: TIM1_CH1 (PE9)  - Hall sensor interface input 1	
-	5: TIM4_CH2 (PD13) - PWM (configured below)
-	6: TIM4_CH3 (PD14) - PWM (configured below)
+	5: TIM4_CH2 (PD13) - PWM (configured below) Servo
+	6: TIM4_CH3 (PD14) - PWM (configured below) Motor
  */
 static const struct pios_tim_channel pios_tim_hall_if_channels[] = {
 	{

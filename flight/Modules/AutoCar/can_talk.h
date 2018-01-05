@@ -26,7 +26,6 @@ struct CANCmdData
 struct CANSpeedRawData
 {
     uint32_t time_stamp;
-    uint32_t hallsensor_count;
     float speed_estimate;
 };
 
