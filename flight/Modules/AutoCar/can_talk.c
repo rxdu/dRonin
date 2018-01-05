@@ -11,6 +11,17 @@
 #include "jlink_rtt.h"
 #include "auto_car.h"
 
+void AutoCarPublishHeartbeat()
+{
+    // make can message binary compatible with uavcan
+    uint8_t can_frame[8];
+    static uint8_t dummy_byte = 0;
+    can_frame[0] = 1;
+    can_frame[1] = dummy_byte++;
+
+    PIOS_CAN_TxCANFrame(CANTALK_AUTOCAR_MCUHEARTBEAT_DATA_TYPE_ID, true, can_frame, 2);
+}
+
 void AutoCarPublishSpeedData(struct CANSpeedRawData *spd_data)
 {
     // make can message binary compatible with uavcan

@@ -13,9 +13,11 @@
 #include "stdint.h"
 
 // Single-frame data from UAVCAN
-#define CANTALK_AUTOCAR_CARSPEED_DATA_TYPE_ID        22026242
-#define CANTALK_AUTOCAR_CARCOMMAND_DATA_TYPE_ID      22025474
-#define CANTALK_AUTOCAR_SBCHEARTBEAT_DATA_TYPE_ID    268522754
+#define CANTALK_AUTOCAR_MCUHEARTBEAT_DATA_TYPE_ID    3301
+#define CANTALK_AUTOCAR_SBCHEARTBEAT_DATA_TYPE_ID    3302
+
+#define CANTALK_AUTOCAR_CARCOMMAND_DATA_TYPE_ID      3311
+#define CANTALK_AUTOCAR_CARSPEED_DATA_TYPE_ID        3312
 
 struct CANCmdData
 {
@@ -29,6 +31,7 @@ struct CANSpeedRawData
     float speed_estimate;
 };
 
+void AutoCarPublishHeartbeat();
 void AutoCarPublishSpeedData(struct CANSpeedRawData *spd_data);
 void AutoCarReceiveCANMessage(uint32_t id, const uint8_t *data, uint8_t data_len);
 

@@ -109,8 +109,7 @@ static void autoCarTask(void *parameters)
 
 	uint32_t sys_time = PIOS_Thread_Systime();
 	uint32_t last_update_time = sys_time;
-	// static uint32_t loop_count = 0;
-
+	static uint32_t loop_count = 0;
 	while (1)
 	{
 		// static uint32_t time_label = 0;
@@ -140,17 +139,18 @@ static void autoCarTask(void *parameters)
 			(void)spd_raw;
 			// AutoCarPublishSpeedData(&spd_raw);
 
-			JLinkRTTPrintf(0, "Raw: %d , Speed: %ld\n", hallData.count, (int32_t)(hallData.speed * 100));
+			// JLinkRTTPrintf(0, "Raw: %d , Speed: %ld\n", hallData.count, (int32_t)(hallData.speed * 100));
 		}
 		else
 		{
 			uint32_t out_dated = sys_time - last_update_time;
+			(void)out_dated;
 			// the car is running at very low speed, smaller than 0.07892467125 m/s
-			JLinkRTTPrintf(0, "No speed data for: %d ms\n", out_dated);
+			// JLinkRTTPrintf(0, "No speed data for: %d ms\n", out_dated);
 		}
 
-		// if (loop_count++ % 200 == 0)
-		// 	updateCANNodeStatus(false);
+		if (loop_count++ % 200 == 0)
+			AutoCarPublishHeartbeat();
 
 		PIOS_Thread_Sleep_Until(&sys_time, UPDATE_PERIOD_MS);
 	}
