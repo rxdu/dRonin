@@ -12,7 +12,7 @@
 
 #include "stdint.h"
 
-// Single-frame data from UAVCAN
+// Smaller ID -> Higher priority
 #define CANTALK_AUTOCAR_MCUHEARTBEAT_DATA_TYPE_ID    3301
 #define CANTALK_AUTOCAR_SBCHEARTBEAT_DATA_TYPE_ID    3302
 

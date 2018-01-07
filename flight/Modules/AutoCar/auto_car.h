@@ -24,6 +24,7 @@ struct pios_sensor_hallsensor_data {
 };
 
 struct pios_can_cmd_data {
+	uint8_t update_flags;
 	float steering;
 	float throttle;
 };

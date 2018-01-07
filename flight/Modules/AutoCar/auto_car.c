@@ -33,8 +33,6 @@ extern uintptr_t pios_can_id;
 #define UPDATE_PERIOD_MS 5
 #define UPDATE_PERIOD_US 2000
 
-#define CAN_RX_TIMEOUT_MS 10
-
 #define HALL_SENSOR_QUEUE_SIZE 2
 #define CAN_CMD_QUEUE_SIZE 2
 
@@ -107,6 +105,7 @@ static void autoCarTask(void *parameters)
 
 	hallData.count = 0;
 
+	struct CANSpeedRawData spd_raw;
 	uint32_t sys_time = PIOS_Thread_Systime();
 	uint32_t last_update_time = sys_time;
 	static uint32_t loop_count = 0;
@@ -127,8 +126,6 @@ static void autoCarTask(void *parameters)
 		{
 			last_update_time = sys_time;
 
-			struct CANSpeedRawData spd_raw;
-
 			HallSensorGet(&hallData);
 
 			// Send latest speed measurement
@@ -137,7 +134,7 @@ static void autoCarTask(void *parameters)
 			spd_raw.speed_estimate = hallData.speed;
 
 			(void)spd_raw;
-			// AutoCarPublishSpeedData(&spd_raw);
+			AutoCarPublishSpeedData(&spd_raw);
 
 			// JLinkRTTPrintf(0, "Raw: %d , Speed: %ld\n", hallData.count, (int32_t)(hallData.speed * 100));
 		}
@@ -147,6 +144,13 @@ static void autoCarTask(void *parameters)
 			(void)out_dated;
 			// the car is running at very low speed, smaller than 0.07892467125 m/s
 			// JLinkRTTPrintf(0, "No speed data for: %d ms\n", out_dated);
+			// Send latest speed measurement
+			spd_raw.time_stamp = sys_time;
+			// spd_raw.hallsensor_count = hallData.count;
+			spd_raw.speed_estimate = 0;
+
+			(void)spd_raw;
+			AutoCarPublishSpeedData(&spd_raw);
 		}
 
 		if (loop_count++ % 200 == 0)
@@ -212,12 +216,14 @@ void AutoCarSetNavigationDesired(struct pios_can_cmd_data *cmd)
 	CarNavigationDesiredData nav_desired;
 	CarNavigationDesiredGet(&nav_desired);
 
-	nav_desired.Steering = cmd->steering;
-	nav_desired.Throttle = cmd->throttle;
+	if(cmd->update_flags & 0x01)
+		nav_desired.Steering = cmd->steering;
+	if(cmd->update_flags & 0x02)
+		nav_desired.Throttle = cmd->throttle;
 
 	CarNavigationDesiredSet(&nav_desired);
 
-	// JLinkRTTPrintf(0, "Set navigation desired from CAN: %d, %d\n",(int32_t)(nav_desired.Steering*100), (int32_t)(nav_desired.Throttle*100));
+	JLinkRTTPrintf(0, "Set navigation desired from CAN: %d, %d\n",(int32_t)(nav_desired.Steering*100), (int32_t)(nav_desired.Throttle*100));
 }
 
 void AutoCarGetNavigationDesired(struct pios_can_cmd_data *cmd)
