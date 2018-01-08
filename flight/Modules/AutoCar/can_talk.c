@@ -50,6 +50,7 @@ void AutoCarReceiveCANMessage(uint32_t id, const uint8_t *data, uint8_t data_len
             motor_cmd = (int8_t)data[2];           
             cmd.steering = servo_cmd / 100.0;
             cmd.throttle = motor_cmd / 100.0;
+            (void)cmd;
             AutoCarSetNavigationDesired(&cmd);
             // JLinkRTTPrintf(0, "Received car_command, payload lenght %d, byte 1: %d , byte 2: %d\n", data_len, servo_cmd, motor_cmd);
             break;

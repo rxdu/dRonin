@@ -14,6 +14,8 @@
 
 #include "carnavigationdesired.h"
 #include "hallsensor.h"
+#include "drivingstatus.h"
+#include "caractuatordesired.h"
 
 #include "auto_car.h"
 #include "can_talk.h"
@@ -30,7 +32,7 @@ extern uintptr_t pios_can_id;
 
 #define TASK_PRIORITY PIOS_THREAD_PRIO_HIGH
 
-#define UPDATE_PERIOD_MS 5
+#define UPDATE_PERIOD_MS 10
 #define UPDATE_PERIOD_US 2000
 
 #define HALL_SENSOR_QUEUE_SIZE 2
@@ -42,20 +44,17 @@ static uint32_t idleCounterClear;
 
 static struct pios_can_cmd_data prev_can_cmd_data;
 
-// static HallSensorData hallsensorData;
-// static struct pios_sensor_hallsensor_data hallsensor_data;
-
-// sensor queues
-// static struct pios_queue *speedQueue;
-
 static struct pios_queue *hallsensor_queue;
 static struct pios_queue *navigation_desired_queue;
+
+static volatile bool driving_status_update_flag = true;
+static bool is_in_navigation_mode = false;
 
 static struct pios_thread *taskHandle;
 
 // Private functions
 static void autoCarTask(void *parameters);
-// static void update_hallsensor_data(struct pios_sensor_hallsensor_data *hall);
+static void AutoCarResetNavigationDesired();
 
 /**
  * Module starting
@@ -101,14 +100,18 @@ MODULE_HIPRI_INITCALL(AutoCarTaskInitialize, AutoCarTaskStart);
 static void autoCarTask(void *parameters)
 {
 	UAVObjEvent ev;
-	HallSensorData hallData;
 
+	HallSensorData hallData;
 	hallData.count = 0;
 
 	struct CANSpeedRawData spd_raw;
+
 	uint32_t sys_time = PIOS_Thread_Systime();
 	uint32_t last_update_time = sys_time;
 	static uint32_t loop_count = 0;
+
+	DrivingStatusConnectCallbackCtx(UAVObjCbSetFlag, &driving_status_update_flag);
+
 	while (1)
 	{
 		// static uint32_t time_label = 0;
@@ -118,6 +121,25 @@ static void autoCarTask(void *parameters)
 		// 	JLinkRTTPrintf(0, "%ld\n", time_label - prev_time_label);
 		// else
 		// 	JLinkRTTPrintf(0, "%ld\n", 0xffffffff - prev_time_label + time_label);
+
+		if (driving_status_update_flag)
+		{
+			driving_status_update_flag = false;
+
+			DrivingStatusDrivingModeOptions current_mode;
+			DrivingStatusDrivingModeGet(&current_mode);
+
+			if (current_mode == DRIVINGSTATUS_DRIVINGMODE_NAVIGATION)
+			{
+				// JLinkRTTPrintf(0, "In navigation mode\n", 0);
+				is_in_navigation_mode = true;
+			}
+			else
+			{
+				is_in_navigation_mode = false;
+				AutoCarResetNavigationDesired();
+			}
+		}
 
 		// get current system time
 		sys_time = PIOS_Thread_Systime();
@@ -202,46 +224,29 @@ float AutoCarUpdateCarSpeed(uint16_t hall_count)
 
 void AutoCarResetNavigationDesired()
 {
-	CarNavigationDesiredData nav_desired;
-	CarNavigationDesiredGet(&nav_desired);
-
-	nav_desired.Steering = 0;
-	nav_desired.Throttle = 0;
-
-	CarNavigationDesiredSet(&nav_desired);
+	prev_can_cmd_data.steering = 0;
+	prev_can_cmd_data.throttle = 0;
 }
 
 void AutoCarSetNavigationDesired(struct pios_can_cmd_data *cmd)
 {
-	CarNavigationDesiredData nav_desired;
-	CarNavigationDesiredGet(&nav_desired);
+	if (cmd->update_flags & 0x01)
+		prev_can_cmd_data.steering = cmd->steering;
+	if (cmd->update_flags & 0x02)
+		prev_can_cmd_data.throttle = cmd->throttle;
 
-	if(cmd->update_flags & 0x01)
-		nav_desired.Steering = cmd->steering;
-	if(cmd->update_flags & 0x02)
-		nav_desired.Throttle = cmd->throttle;
-
-	CarNavigationDesiredSet(&nav_desired);
-
-	JLinkRTTPrintf(0, "Set navigation desired from CAN: %d, %d\n",(int32_t)(nav_desired.Steering*100), (int32_t)(nav_desired.Throttle*100));
-}
-
-void AutoCarGetNavigationDesired(struct pios_can_cmd_data *cmd)
-{
-	UAVObjEvent ev;
-	if (PIOS_Queue_Receive(navigation_desired_queue, &ev, 0))
+	if (is_in_navigation_mode)
 	{
-		CarNavigationDesiredData nav_desired;
-		CarNavigationDesiredGet(&nav_desired);
+		CarActuatorDesiredData actuator;
+		actuator.Roll = 0;  //cmd->Roll;
+		actuator.Pitch = 0; //cmd->Pitch;
+		actuator.Yaw = 0;   //cmd->Yaw;
+		actuator.Steering = prev_can_cmd_data.steering;
+		actuator.Throttle = prev_can_cmd_data.throttle;
+		CarActuatorDesiredSet(&actuator);
 
-		prev_can_cmd_data.steering = nav_desired.Steering;
-		prev_can_cmd_data.throttle = nav_desired.Throttle;
+		JLinkRTTPrintf(0, "Set navigation desired from CAN: %d, %d\n", (int32_t)(prev_can_cmd_data.steering * 100), (int32_t)(prev_can_cmd_data.throttle * 100));
 	}
-
-	// update CAN cmd if there exists a new one in queue
-	//	otherwise use previous values
-	cmd->steering = prev_can_cmd_data.steering;
-	cmd->throttle = prev_can_cmd_data.throttle;
 }
 
 /**

@@ -54,7 +54,6 @@
 #include "carnavigationdesired.h"
 
 #include "misc_math.h"
-#include "auto_car.h"
 
 #include "jlink_rtt.h"
 
@@ -105,11 +104,11 @@ static float                      driving_mode_value;
 static enum control_status        control_status;
 static bool                       settings_updated;
 
-static struct pios_can_cmd_data cmd_from_can;
+// static struct pios_can_cmd_data cmd_from_can;
 
 // Private functions
 static void update_manual_desired(CarManualControlCommandData * cmd);
-static void update_navigation_desired(CarManualControlCommandData * cmd);
+// static void update_navigation_desired(CarManualControlCommandData * cmd);
 static void update_emergency_desired(CarManualControlCommandData * cmd);
 
 static void set_driving_mode();
@@ -466,14 +465,13 @@ int32_t transmitter_control_select(bool reset_controller)
 
 	switch(drivingMode) {
 	case DRIVINGSTATUS_DRIVINGMODE_MANUAL:
-		AutoCarResetNavigationDesired();
 		update_manual_desired(&cmd);
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_NAVIGATION:
-		update_navigation_desired(&cmd);
+		//update_navigation_desired(&cmd);
+		// AutoCar task will update desired actuator values
 		break;
 	case DRIVINGSTATUS_DRIVINGMODE_EMERGENCY:
-		AutoCarResetNavigationDesired();
 		update_emergency_desired(&cmd);
 		break;
 	default:
@@ -899,23 +897,23 @@ static void update_manual_desired(CarManualControlCommandData * cmd)
 }
 
 //! In navigation mode, set navigation desired
-static void update_navigation_desired(CarManualControlCommandData * cmd)
-{
-	AutoCarGetNavigationDesired(&cmd_from_can);
+// static void update_navigation_desired(CarManualControlCommandData * cmd)
+// {
+// 	AutoCarGetNavigationDesired(&cmd_from_can);
 
-	CarActuatorDesiredData actuator;
-	CarActuatorDesiredGet(&actuator);
-	actuator.Roll = cmd->Roll;
-	actuator.Pitch = cmd->Pitch;
-	actuator.Yaw = cmd->Yaw;
-	actuator.Steering = cmd_from_can.steering;
-	actuator.Throttle = cmd_from_can.throttle;
+// 	CarActuatorDesiredData actuator;
+// 	CarActuatorDesiredGet(&actuator);
+// 	actuator.Roll = cmd->Roll;
+// 	actuator.Pitch = cmd->Pitch;
+// 	actuator.Yaw = cmd->Yaw;
+// 	actuator.Steering = cmd_from_can.steering;
+// 	actuator.Throttle = cmd_from_can.throttle;
 
-	// if(actuator.Steering != 0 && actuator.Throttle != 0)
-	// 	JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
+// 	// if(actuator.Steering != 0 && actuator.Throttle != 0)
+// 	// 	JLinkRTTPrintf(0, "Updating navigation desired: %d, %d\n",(int32_t)(actuator.Steering*100), (int32_t)(actuator.Throttle*100));
 
-	CarActuatorDesiredSet(&actuator);
-}
+// 	CarActuatorDesiredSet(&actuator);
+// }
 
 static void update_emergency_desired(CarManualControlCommandData * cmd)
 {

@@ -34,10 +34,6 @@ struct pios_queue *AutoCarGetHallSensorQueue(void);
 float AutoCarUpdateCarSpeed(uint16_t hall_count);
 void AutoCarUpdateHallsensorData(uint16_t hall_count);
 
-// The set and reset functions are called by the CAN node or transmitter control node
-void AutoCarResetNavigationDesired();
 void AutoCarSetNavigationDesired(struct pios_can_cmd_data * cmd);
-// This function is used the get latest command from CAN bus
-void AutoCarGetNavigationDesired(struct pios_can_cmd_data * cmd);
 
 #endif /* AUTO_CAR_H */
