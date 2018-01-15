@@ -11,9 +11,16 @@
 #include "jlink_rtt.h"
 #include "auto_car.h"
 
+static bool CheckCommandValid(float cmd)
+{
+    if(cmd >= -1.0f && cmd <= 1.0f)
+        return true;
+    else 
+        return false;
+}
+
 void AutoCarPublishHeartbeat()
 {
-    // make can message binary compatible with uavcan
     uint8_t can_frame[8];
     static uint8_t dummy_byte = 0;
     can_frame[0] = 1;
@@ -24,13 +31,12 @@ void AutoCarPublishHeartbeat()
 
 void AutoCarPublishSpeedData(struct CANSpeedRawData *spd_data)
 {
-    // make can message binary compatible with uavcan
     uint8_t can_frame[8];
     static uint8_t dummy_byte = 0;
-    can_frame[0] = 0x000000ff & ((uint32_t)spd_data->time_stamp);
-    can_frame[1] = 0x000000ff & ((uint32_t)spd_data->time_stamp >> 8);
-    can_frame[2] = 0x000000ff & ((uint32_t)spd_data->time_stamp >> 16);
-    can_frame[3] = 0x000000ff & ((uint32_t)spd_data->time_stamp >> 24);
+    can_frame[0] = 0x000000ff & ((uint32_t)spd_data->speed_estimate);
+    can_frame[1] = 0x000000ff & ((uint32_t)spd_data->speed_estimate >> 8);
+    can_frame[2] = 0x000000ff & ((uint32_t)spd_data->speed_estimate >> 16);
+    can_frame[3] = 0x000000ff & ((uint32_t)spd_data->speed_estimate >> 24);
     can_frame[4] = dummy_byte++;
 
     PIOS_CAN_TxCANFrame(CANTALK_AUTOCAR_CARSPEED_DATA_TYPE_ID, true, can_frame, 5);
@@ -50,8 +56,9 @@ void AutoCarReceiveCANMessage(uint32_t id, const uint8_t *data, uint8_t data_len
             motor_cmd = (int8_t)data[2];           
             cmd.steering = servo_cmd / 100.0;
             cmd.throttle = motor_cmd / 100.0;
-            (void)cmd;
-            AutoCarSetNavigationDesired(&cmd);
+            // make sure command stays within valid range, otherwise discard
+            if(CheckCommandValid(cmd.steering) && CheckCommandValid(cmd.throttle))
+                AutoCarSetNavigationDesired(&cmd);
             // JLinkRTTPrintf(0, "Received car_command, payload lenght %d, byte 1: %d , byte 2: %d\n", data_len, servo_cmd, motor_cmd);
             break;
         case CANTALK_AUTOCAR_SBCHEARTBEAT_DATA_TYPE_ID:
