@@ -54,8 +54,8 @@ void AutoCarReceiveCANMessage(uint32_t id, const uint8_t *data, uint8_t data_len
             cmd.update_flags = data[0];
             servo_cmd = (int8_t)data[1];
             motor_cmd = (int8_t)data[2];           
-            cmd.steering = servo_cmd / 100.0;
-            cmd.throttle = motor_cmd / 100.0;
+            cmd.steering = (float)servo_cmd / 100.0f;
+            cmd.throttle = (float)motor_cmd / 100.0f;
             // make sure command stays within valid range, otherwise discard
             if(CheckCommandValid(cmd.steering) && CheckCommandValid(cmd.throttle))
                 AutoCarSetNavigationDesired(&cmd);
