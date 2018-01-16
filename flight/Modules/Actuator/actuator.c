@@ -253,6 +253,8 @@ static void process_input_data(uint32_t this_systime,
 
 	actuator_vect[0] = steering_val;
 	actuator_vect[1] = throttle_val;
+
+	// JLinkRTTPrintf(0, "Actuator command servo-motor: %ld, %ld\n", (uint32_t)(steering_val*100), (uint32_t)(throttle_val*100));
 }
 
 /**
@@ -516,7 +518,7 @@ static void set_failsafe()
 		PIOS_Servo_Set(n, fs_val);
 	}
 
-	// JLinkRTTPrintf(0, "Failsafe command servo-motor: %ld, %ld\n", (uint32_t)Channel[0], (uint32_t)Channel[1]);
+	JLinkRTTPrintf(0, "Failsafe command servo-motor: %ld, %ld\n", (uint32_t)Channel[0], (uint32_t)Channel[1]);
 
 	PIOS_Servo_Update();
 

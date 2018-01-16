@@ -16,6 +16,7 @@
 #include "hallsensor.h"
 #include "drivingstatus.h"
 #include "caractuatordesired.h"
+#include "carmanualcontrolcommand.h"
 
 #include "auto_car.h"
 #include "can_talk.h"
@@ -49,6 +50,8 @@ static struct pios_queue *navigation_desired_queue;
 
 static volatile bool driving_status_update_flag = true;
 static bool is_in_navigation_mode = false;
+static volatile bool transmitter_status_update_flag = true;
+static bool transmitter_connected = false;
 
 static struct pios_thread *taskHandle;
 
@@ -111,6 +114,7 @@ static void autoCarTask(void *parameters)
 	static uint32_t loop_count = 0;
 
 	DrivingStatusConnectCallbackCtx(UAVObjCbSetFlag, &driving_status_update_flag);
+	CarManualControlCommandConnectCallbackCtx(UAVObjCbSetFlag, &transmitter_status_update_flag);
 
 	while (1)
 	{
@@ -122,6 +126,25 @@ static void autoCarTask(void *parameters)
 		// else
 		// 	JLinkRTTPrintf(0, "%ld\n", 0xffffffff - prev_time_label + time_label);
 
+		if (transmitter_status_update_flag)
+		{
+			transmitter_status_update_flag = false;
+
+			CarManualControlCommandData cmd;
+			CarManualControlCommandGet(&cmd);
+
+			if (cmd.Connected == CARMANUALCONTROLCOMMAND_CONNECTED_TRUE)
+			{
+				transmitter_connected = true;
+				// JLinkRTTPrintf(0, "Transmitter connected\n", 0);
+			}
+			else
+			{
+				transmitter_connected = false;
+				JLinkRTTPrintf(0, "Transmitter lost connection\n", 0);
+			}
+		}
+
 		if (driving_status_update_flag)
 		{
 			driving_status_update_flag = false;
@@ -129,13 +152,14 @@ static void autoCarTask(void *parameters)
 			DrivingStatusDrivingModeOptions current_mode;
 			DrivingStatusDrivingModeGet(&current_mode);
 
-			if (current_mode == DRIVINGSTATUS_DRIVINGMODE_NAVIGATION)
+			if (current_mode == DRIVINGSTATUS_DRIVINGMODE_NAVIGATION && transmitter_connected == true)
 			{
-				// JLinkRTTPrintf(0, "In navigation mode\n", 0);
+				JLinkRTTPrintf(0, "In navigation mode\n", 0);
 				is_in_navigation_mode = true;
 			}
 			else
 			{
+				JLinkRTTPrintf(0, "Left navigation mode\n", 0);
 				is_in_navigation_mode = false;
 				AutoCarResetNavigationDesired();
 			}
@@ -244,8 +268,7 @@ void AutoCarSetNavigationDesired(struct pios_can_cmd_data *cmd)
 		actuator.Steering = prev_can_cmd_data.steering;
 		actuator.Throttle = prev_can_cmd_data.throttle;
 		CarActuatorDesiredSet(&actuator);
-
-		JLinkRTTPrintf(0, "Set navigation desired from CAN: %d, %d\n", (int32_t)(prev_can_cmd_data.steering * 100), (int32_t)(prev_can_cmd_data.throttle * 100));
+		// JLinkRTTPrintf(0, "Set navigation desired from CAN: %d, %d\n", (int32_t)(actuator.Steering * 100), (int32_t)(actuator.Throttle * 100));
 	}
 }
 

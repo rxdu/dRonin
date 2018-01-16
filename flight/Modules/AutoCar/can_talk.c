@@ -35,7 +35,7 @@ void AutoCarPublishSpeedData(struct CANSpeedRawData *spd_data)
     uint32_t speed_bits;
     static uint8_t dummy_byte = 0;
 
-    // encode float: LSByte first, MSBtye last 
+    // encode float: LSByte first, MSBtye last
     memcpy(&speed_bits, &spd_data->speed_estimate, sizeof(speed_bits));
     can_frame[0] = 0x000000ff & (speed_bits);
     can_frame[1] = 0x000000ff & (speed_bits >> 8);
@@ -56,14 +56,14 @@ void AutoCarReceiveCANMessage(uint32_t id, const uint8_t *data, uint8_t data_len
     {
     case CANTALK_AUTOCAR_CARCOMMAND_DATA_TYPE_ID:
         cmd.update_flags = data[0];
-        servo_cmd = (int8_t)data[1];
-        motor_cmd = (int8_t)data[2];
+        memcpy(&servo_cmd, &data[1], sizeof(servo_cmd));
+        memcpy(&motor_cmd, &data[2], sizeof(motor_cmd));
         cmd.steering = (float)servo_cmd / 100.0f;
         cmd.throttle = (float)motor_cmd / 100.0f;
+        // JLinkRTTPrintf(0, "Received car_command, payload lenght %d, raw servo: %d, raw motor: %d, servo: %d , motor: %d\n", data_len, servo_cmd, motor_cmd, (int)(cmd.steering*100), (int)(cmd.throttle*100));
         // make sure command stays within valid range, otherwise discard
         if (CheckCommandValid(cmd.steering) && CheckCommandValid(cmd.throttle))
             AutoCarSetNavigationDesired(&cmd);
-        // JLinkRTTPrintf(0, "Received car_command, payload lenght %d, byte 1: %d , byte 2: %d\n", data_len, servo_cmd, motor_cmd);
         break;
     case CANTALK_AUTOCAR_SBCHEARTBEAT_DATA_TYPE_ID:
         JLinkRTTPrintf(0, "Received heatbeat from single-board computer\n", 0);
