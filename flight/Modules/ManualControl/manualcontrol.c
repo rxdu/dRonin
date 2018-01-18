@@ -155,14 +155,14 @@ static void manualControlTask(void *parameters)
 		switch(control_selection) {
 		case DRIVINGSTATUS_CONTROLSOURCE_TRANSMITTER:
 			transmitter_control_select(reset_controller);
-			JLinkRTTPrintf(0, "Control source: transmitter\n", 0);
+			// JLinkRTTPrintf(0, "Control source: transmitter\n", 0);
 			break;		
 		default:
 			/* Fall through into failsafe */
 			failsafe_control_select(last_control_selection !=
 					DRIVINGSTATUS_CONTROLSOURCE_FAILSAFE);
 			control_selection = DRIVINGSTATUS_CONTROLSOURCE_FAILSAFE;
-			JLinkRTTPrintf(0, "Control source: ailsafe\n", 0);
+			// JLinkRTTPrintf(0, "Control source: failsafe\n", 0);
 			break;
 		}
 

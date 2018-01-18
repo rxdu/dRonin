@@ -136,7 +136,7 @@ static void autoCarTask(void *parameters)
 			if (cmd.Connected == CARMANUALCONTROLCOMMAND_CONNECTED_TRUE)
 			{
 				transmitter_connected = true;
-				// JLinkRTTPrintf(0, "Transmitter connected\n", 0);
+				JLinkRTTPrintf(0, "Transmitter connected\n", 0);
 			}
 			else
 			{

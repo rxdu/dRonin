@@ -518,7 +518,7 @@ static void set_failsafe()
 		PIOS_Servo_Set(n, fs_val);
 	}
 
-	JLinkRTTPrintf(0, "Failsafe command servo-motor: %ld, %ld\n", (uint32_t)Channel[0], (uint32_t)Channel[1]);
+	// JLinkRTTPrintf(0, "Failsafe command servo-motor: %ld, %ld\n", (uint32_t)Channel[0], (uint32_t)Channel[1]);
 
 	PIOS_Servo_Update();
 
